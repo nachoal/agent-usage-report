@@ -40,6 +40,7 @@ describe("parseCliArgs", () => {
       "report.html",
       "--output-json",
       "report.json",
+      "--color",
       "--skip-archived",
     ]);
 
@@ -51,6 +52,13 @@ describe("parseCliArgs", () => {
     expect(args.outputHtml).toBe("report.html");
     expect(args.outputJson).toBe("report.json");
     expect(args.skipArchived).toBe(true);
+    expect(args.color).toBe(true);
+  });
+
+  it("accepts --no-color", () => {
+    const args = parseCliArgs(["--no-color"]);
+
+    expect(args.color).toBe(false);
   });
 });
 

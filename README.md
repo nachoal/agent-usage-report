@@ -59,6 +59,8 @@ Flags:
 - `--timezone`: IANA timezone for day bucketing
 - `--output-html`: HTML output path
 - `--output-json`: JSON output path
+- `--color`: force colored progress output
+- `--no-color`: disable colored progress output
 - `--skip-archived`: skip `~/.codex/archived_sessions`
 
 ## Privacy

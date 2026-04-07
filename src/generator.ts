@@ -3,6 +3,7 @@ import { readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { homedir, platform as osPlatform, release as osRelease } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import picocolors from "picocolors";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -81,6 +82,7 @@ export interface CliArgs {
   outputHtml: string;
   outputJson: string;
   skipArchived: boolean;
+  color?: boolean | null;
 }
 
 interface UsageTotals {
@@ -252,6 +254,72 @@ function createEmptyScanStats(): Record<ScanKey, number> {
     tokenEventsCounted: 0,
     unsupportedLegacyFiles: 0,
     activityOnlyDays: 0,
+  };
+}
+
+interface CliStatusReporter {
+  step(message: string): void;
+  success(message: string): void;
+  skip(message: string): void;
+  info(message: string): void;
+}
+
+function pluralize(count: number, singular: string, plural = `${singular}s`): string {
+  return count === 1 ? singular : plural;
+}
+
+function formatCount(count: number): string {
+  return count.toLocaleString("en-US");
+}
+
+function summarizePaths(paths: string[]): string {
+  if (paths.length === 0) return "no paths";
+  if (paths.length === 1) return paths[0]!;
+  return `${paths[0]} (+${paths.length - 1} more)`;
+}
+
+function countProviderScanDays(scan: ProviderScanResult): number {
+  return new Set([...scan.dailyUsage.keys(), ...scan.displayValuesByDay.keys()]).size;
+}
+
+function formatProviderScanSummary(scan: ProviderScanResult): string {
+  const dayCount = countProviderScanDays(scan);
+  const extras: string[] = [];
+  if (scan.stats.activityOnlyDays > 0) {
+    extras.push(
+      `${formatCount(scan.stats.activityOnlyDays)} activity-only ${pluralize(scan.stats.activityOnlyDays, "day")}`,
+    );
+  }
+  if (scan.stats.parseErrors > 0) {
+    extras.push(`${formatCount(scan.stats.parseErrors)} parse ${pluralize(scan.stats.parseErrors, "error")}`);
+  }
+  const suffix = extras.length > 0 ? `, ${extras.join(", ")}` : "";
+  return (
+    `${scan.providerLabel}: ${formatCount(scan.stats.filesScanned)} ${pluralize(scan.stats.filesScanned, "file")} scanned, ` +
+    `${formatCount(scan.stats.tokenEventsCounted)} token ${pluralize(scan.stats.tokenEventsCounted, "event")} counted, ` +
+    `${formatCount(dayCount)} ${pluralize(dayCount, "day")}${suffix}`
+  );
+}
+
+function createCliStatusReporter(colorOverride?: boolean | null): CliStatusReporter {
+  const colors = picocolors.createColors(colorOverride ?? undefined);
+  const write = (label: string, formatter: (value: string) => string, message: string) => {
+    process.stderr.write(`${formatter(colors.bold(label))} ${message}\n`);
+  };
+
+  return {
+    step(message) {
+      write("RUN", colors.cyan, message);
+    },
+    success(message) {
+      write("OK", colors.green, message);
+    },
+    skip(message) {
+      write("SKIP", colors.yellow, message);
+    },
+    info(message) {
+      write("INFO", colors.gray, message);
+    },
   };
 }
 
@@ -1593,10 +1661,15 @@ export async function writeOutput(
   report: Record<string, unknown>,
   outputHtml: string,
   outputJson: string,
+  status?: CliStatusReporter,
 ): Promise<void> {
+  status?.step(`Writing JSON payload to ${outputJson}`);
   await writeFile(outputJson, JSON.stringify(report, null, 2), "utf8");
+  status?.success(`Wrote JSON payload to ${outputJson}`);
+  status?.step(`Rendering self-contained HTML report to ${outputHtml}`);
   const template = await loadTemplate();
   await writeFile(outputHtml, template.replace("__DATA__", JSON.stringify(report)), "utf8");
+  status?.success(`Wrote HTML report to ${outputHtml}`);
 }
 
 export function parseCliArgs(argv: string[]): CliArgs {
@@ -1609,6 +1682,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     outputHtml: "agent-usage-report.html",
     outputJson: "agent-usage-data.json",
     skipArchived: false,
+    color: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -1653,6 +1727,12 @@ export function parseCliArgs(argv: string[]): CliArgs {
       case "--skip-archived":
         args.skipArchived = true;
         break;
+      case "--color":
+        args.color = true;
+        break;
+      case "--no-color":
+        args.color = false;
+        break;
       case "-h":
       case "--help":
         printHelp();
@@ -1676,54 +1756,96 @@ Options:
   --timezone <iana-tz>         Day bucketing timezone
   --output-html <path>         HTML output path
   --output-json <path>         JSON output path
+  --color                      Force colored CLI status output
+  --no-color                   Disable colored CLI status output
   --skip-archived              Skip ~/.codex/archived_sessions
   -h, --help                   Show this help text`);
 }
 
-export async function generateReport(args: CliArgs): Promise<Record<string, unknown>> {
+export async function generateReport(
+  args: CliArgs,
+  status?: CliStatusReporter,
+): Promise<Record<string, unknown>> {
   const codexHome = resolve(args.codexHome);
   if (!existsSync(codexHome)) throw new Error(`Configured usage source does not exist: ${codexHome}`);
 
   const claudeConfigPaths = resolveClaudeConfigPaths(args.claudeConfigDir);
   const openCodeBaseDir = resolveOpenCodeBaseDir(args.opencodeDir);
   const piSessionsDir = resolvePiSessionsDir(args.piAgentDir);
+  const claudeProjectDirs = getClaudeProjectDirs(claudeConfigPaths);
+  const claudeStatsCacheFiles = getClaudeStatsCacheFiles(claudeConfigPaths);
+  const claudeHistoryFiles = getClaudeHistoryFiles(claudeConfigPaths);
 
   const providerScans: ProviderScanResult[] = [];
-  providerScans.push(await scanCodexProvider(codexHome, !args.skipArchived, args.timezone));
+  status?.step(`Scanning Codex CLI logs in ${codexHome}`);
+  const codexScan = await scanCodexProvider(codexHome, !args.skipArchived, args.timezone);
+  providerScans.push(codexScan);
+  status?.success(formatProviderScanSummary(codexScan));
 
-  if (
-    getClaudeProjectDirs(claudeConfigPaths).length > 0 ||
-    getClaudeStatsCacheFiles(claudeConfigPaths).length > 0 ||
-    getClaudeHistoryFiles(claudeConfigPaths).length > 0
-  ) {
+  if (claudeProjectDirs.length > 0 || claudeStatsCacheFiles.length > 0 || claudeHistoryFiles.length > 0) {
+    status?.step(`Scanning Claude Code data in ${summarizePaths(claudeConfigPaths)}`);
     const claudeScan = await scanClaudeProvider(claudeConfigPaths, args.timezone);
-    if (providerScanHasUsage(claudeScan)) providerScans.push(claudeScan);
+    if (providerScanHasUsage(claudeScan)) {
+      providerScans.push(claudeScan);
+      status?.success(formatProviderScanSummary(claudeScan));
+    } else {
+      status?.skip(`Claude Code data was found in ${summarizePaths(claudeConfigPaths)} but produced no usage rows`);
+    }
+  } else {
+    status?.skip(`Claude Code data not found in ${summarizePaths(claudeConfigPaths)}`);
   }
 
   if (openCodeBaseDir) {
+    status?.step(`Scanning OpenCode data in ${openCodeBaseDir}`);
     const openCodeScan = await scanOpenCodeProvider(openCodeBaseDir, args.timezone);
-    if (providerScanHasUsage(openCodeScan)) providerScans.push(openCodeScan);
+    if (providerScanHasUsage(openCodeScan)) {
+      providerScans.push(openCodeScan);
+      status?.success(formatProviderScanSummary(openCodeScan));
+    } else {
+      status?.skip(`OpenCode data was found in ${openCodeBaseDir} but produced no usage rows`);
+    }
+  } else {
+    status?.skip("OpenCode data not found");
   }
 
   if (piSessionsDir) {
+    status?.step(`Scanning Pi Coding Agent sessions in ${piSessionsDir}`);
     const piScan = await scanPiProvider(piSessionsDir, args.timezone);
-    if (providerScanHasUsage(piScan)) providerScans.push(piScan);
+    if (providerScanHasUsage(piScan)) {
+      providerScans.push(piScan);
+      status?.success(formatProviderScanSummary(piScan));
+    } else {
+      status?.skip(`Pi Coding Agent data was found in ${piSessionsDir} but produced no usage rows`);
+    }
+  } else {
+    status?.skip("Pi Coding Agent data not found");
   }
 
-  return buildReportPayload(providerScans, args.timezone);
+  status?.step(
+    `Building combined report for ${formatCount(providerScans.length)} ${pluralize(providerScans.length, "provider")} and resolving pricing`,
+  );
+  const report = await buildReportPayload(providerScans, args.timezone);
+  status?.success(
+    `Built report payload for ${formatCount(providerScans.length)} ${pluralize(providerScans.length, "provider")}`,
+  );
+  return report;
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {
   const args = parseCliArgs(argv);
-  const report = await generateReport(args);
+  const status = createCliStatusReporter(args.color);
+  status.step("Preparing local agent usage report");
+  status.info(`Timezone: ${args.timezone}`);
+  const report = await generateReport(args, status);
   const outputHtml = resolve(args.outputHtml);
   const outputJson = resolve(args.outputJson);
-  await writeOutput(report, outputHtml, outputJson);
+  await writeOutput(report, outputHtml, outputJson, status);
   const combined = report.combined as ProviderReport;
   const primaryScan = (report.providers as Record<string, ProviderReport>)[DEFAULT_PROVIDER_ID]?.scan ?? createEmptyScanStats();
-  console.log(`Scanned ${primaryScan.filesScanned} local usage files from ${resolve(args.codexHome)}`);
-  console.log(`Counted ${primaryScan.tokenEventsCounted} token events across ${combined.days.length} days`);
-  console.log(`Total tokens in extracted dataset: ${combined.days.reduce((sum, day) => sum + day.totalTokens, 0).toLocaleString("en-US")}`);
-  console.log(`HTML report: ${outputHtml}`);
-  console.log(`JSON data: ${outputJson}`);
+  status.success("Report generation complete");
+  status.info(`Scanned ${formatCount(primaryScan.filesScanned)} local usage ${pluralize(primaryScan.filesScanned, "file")} from ${resolve(args.codexHome)}`);
+  status.info(`Counted ${formatCount(primaryScan.tokenEventsCounted)} token ${pluralize(primaryScan.tokenEventsCounted, "event")} across ${formatCount(combined.days.length)} ${pluralize(combined.days.length, "day")}`);
+  status.info(`Total tokens in extracted dataset: ${formatCount(combined.days.reduce((sum, day) => sum + day.totalTokens, 0))}`);
+  status.info(`HTML report: ${outputHtml}`);
+  status.info(`JSON data: ${outputJson}`);
 }
