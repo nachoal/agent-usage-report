@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Agent Usage Report</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --panel: #ffffff;
+        --panel-strong: #ffffff;
+        --ink: #111111;
+        --muted: #888888;
+        --border: #e8e8e8;
+        --shadow: none;
+        --accent: #111111;
+        --accent-soft: rgba(0, 0, 0, 0.04);
+        --cell-size: 13px;
+        --cell-gap: 2px;
+        --cell-0: #eaeaea;
+        --cell-1: #dbeafe;
+        --cell-2: #93c5fd;
+        --cell-3: #3b82f6;
+        --cell-4: #1d4ed8;
+        --cell-5: #1e3a5f;
+        --legend-text: #bbbbbb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          "Inter",
+          "SF Pro Display",
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+      }
+
+      .page {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 40px 24px 56px;
+      }
+
+      .shell {
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      .header-copy {
+        max-width: 560px;
+      }
+
+      .eyebrow {
+        display: none;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        font-weight: 500;
+      }
+
+      .subtitle {
+        margin: 6px 0 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+
+      .totals {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(160px, 1fr));
+        gap: 16px;
+        min-width: min(100%, 560px);
+      }
+
+      .total-card {
+        text-align: right;
+        padding: 10px 0;
+      }
+
+      .total-label {
+        margin: 0;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: #999999;
+      }
+
+      .total-value {
+        margin: 4px 0 0;
+        font-size: 18px;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        font-weight: 500;
+      }
+
+      .toolbar {
+        margin-top: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .toolbar-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .segmented {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 6px;
+        background: #f3f4f6;
+        border: 1px solid var(--border);
+      }
+
+      .segmented[hidden] {
+        display: none;
+      }
+
+      .segmented button {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        border-radius: 4px;
+        padding: 5px 12px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          background 120ms ease,
+          color 120ms ease;
+      }
+
+      .segmented button:hover {
+        color: var(--ink);
+      }
+
+      .segmented button.is-active {
+        background: var(--ink);
+        color: #ffffff;
+      }
+
+      #provider-controls {
+        background: transparent;
+        border: 0;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
+        padding: 0;
+        gap: 0;
+      }
+
+      #provider-controls button {
+        border-radius: 0;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 400;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+      }
+
+      #provider-controls button:hover {
+        color: var(--ink);
+      }
+
+      #provider-controls button.is-active {
+        background: transparent;
+        color: var(--ink);
+        font-weight: 500;
+        border-bottom-color: var(--ink);
+      }
+
+      .meta-note {
+        font-size: 12px;
+        color: #aaa;
+      }
+
+      .meta-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .meta-badge {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: #f9fafb;
+        color: var(--ink);
+        border-radius: 4px;
+        padding: 3px 8px;
+        font: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: help;
+        transition:
+          background 120ms ease,
+          border-color 120ms ease;
+      }
+
+      .meta-badge:hover {
+        background: #f0f0f0;
+        border-color: #ccc;
+      }
+
+      .meta-tooltip-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .meta-hovercard {
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 25;
+        min-width: 220px;
+        max-width: 320px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.96);
+        color: #f8fafc;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+        font-size: 12px;
+        line-height: 1.5;
+        display: none;
+        white-space: normal;
+      }
+
+      .meta-hovercard strong {
+        color: #ffffff;
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+
+      .meta-hovercard ul {
+        margin: 0;
+        padding-left: 16px;
+      }
+
+      .meta-hovercard li {
+        margin: 2px 0;
+      }
+
+      .meta-tooltip-wrap:hover .meta-hovercard,
+      .meta-tooltip-wrap:focus-within .meta-hovercard {
+        display: block;
+      }
+
+      .heatmap-panel {
+        margin-top: 22px;
+        padding: 24px 0 18px;
+      }
+
+      .heatmap-scroll {
+        overflow-x: auto;
+        padding-bottom: 10px;
+      }
+
+      .heatmap-frame {
+        display: grid;
+        grid-template-columns: 52px auto;
+        gap: 10px;
+        min-width: max-content;
+      }
+
+      .weekday-column {
+        padding-top: 28px;
+        display: grid;
+        grid-template-rows: repeat(7, var(--cell-size));
+        row-gap: var(--cell-gap);
+        align-items: center;
+        color: var(--legend-text);
+        font-size: 11px;
+        font-weight: 400;
+      }
+
+      .weekday-spacer {
+        visibility: hidden;
+      }
+
+      .grid-stack {
+        position: relative;
+        min-width: max-content;
+      }
+
+      .months-row {
+        position: relative;
+        height: 22px;
+        margin-left: 2px;
+        color: var(--legend-text);
+        font-size: 11px;
+        font-weight: 400;
+      }
+
+      .month-label {
+        position: absolute;
+        top: 0;
+        white-space: nowrap;
+      }
+
+      .heatmap-grid {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: var(--cell-size);
+        grid-template-rows: repeat(7, var(--cell-size));
+        gap: var(--cell-gap);
+      }
+
+      .day-cell {
+        width: var(--cell-size);
+        height: var(--cell-size);
+        border-radius: 2px;
+        border: 0;
+        background: var(--cell-0);
+        position: relative;
+        transition:
+          transform 120ms ease,
+          box-shadow 120ms ease;
+      }
+
+      .day-cell.is-padding {
+        opacity: 1;
+        background: var(--cell-0);
+      }
+
+      .day-cell[data-level="0"] {
+        background: var(--cell-0);
+      }
+
+      .day-cell[data-level="1"] {
+        background: var(--cell-1);
+      }
+
+      .day-cell[data-level="2"] {
+        background: var(--cell-2);
+      }
+
+      .day-cell[data-level="3"] {
+        background: var(--cell-3);
+      }
+
+      .day-cell[data-level="4"] {
+        background: var(--cell-4);
+      }
+
+      .day-cell[data-level="5"] {
+        background: var(--cell-5);
+      }
+
+      .day-cell:not(.is-padding):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+      }
+
+      .legend {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--legend-text);
+        font-size: 10px;
+        font-weight: 400;
+      }
+
+      .legend-scale {
+        display: inline-flex;
+        gap: 3px;
+      }
+
+      .legend-cell {
+        width: 13px;
+        height: 13px;
+        border-radius: 2px;
+        border: 0;
+      }
+
+      .cost-table {
+        width: 100%;
+        min-width: 820px;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      .cost-table th,
+      .cost-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .cost-table th {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: #999999;
+      }
+
+      .cost-table tbody tr:hover {
+        background: rgba(0, 0, 0, 0.02);
+      }
+
+      .cost-table tfoot td {
+        font-weight: 600;
+        border-top: 1px solid var(--border);
+        border-bottom: 0;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+
+      .monthly-comparison-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .plan-input-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .plan-input-label {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: #999999;
+      }
+
+      .plan-input-shell {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: #ffffff;
+      }
+
+      .plan-input-prefix {
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .plan-input {
+        width: 92px;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .delta-over {
+        color: #027a48;
+      }
+
+      .delta-under {
+        color: #b42318;
+      }
+
+      .stats {
+        margin-top: 20px;
+        padding: 0;
+        display: flex;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .stat-card {
+        flex: 1;
+        padding: 14px 16px;
+        border-right: 1px solid #f0f0f0;
+      }
+
+      .stat-card:last-child {
+        border-right: 0;
+      }
+
+      .stat-label {
+        margin: 0;
+        color: #999999;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        margin: 4px 0 0;
+        font-size: 18px;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        font-weight: 500;
+        overflow-wrap: anywhere;
+      }
+
+      .stat-subvalue {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .footer {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .tooltip {
+        position: fixed;
+        inset: auto auto 0 0;
+        transform: translate(-999px, -999px);
+        pointer-events: none;
+        min-width: 220px;
+        max-width: 300px;
+        padding: 12px 12px 10px;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.96);
+        color: #f8fafc;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+        transition: opacity 90ms ease;
+        opacity: 0;
+        z-index: 20;
+      }
+
+      .tooltip.is-visible {
+        opacity: 1;
+      }
+
+      .tooltip-title {
+        margin: 0 0 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .tooltip-line {
+        margin: 4px 0;
+        font-size: 13px;
+        line-height: 1.45;
+        color: rgba(248, 250, 252, 0.88);
+      }
+
+      .tooltip-line strong {
+        color: #ffffff;
+      }
+
+      @media (max-width: 1080px) {
+        .header {
+          flex-direction: column;
+        }
+
+        .totals {
+          width: 100%;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .total-card {
+          text-align: left;
+        }
+
+        .stats {
+          flex-wrap: wrap;
+        }
+
+        .stat-card {
+          flex: 1 1 calc(50% - 1px);
+          border-bottom: 1px solid #f0f0f0;
+        }
+
+        .monthly-comparison-stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        :root {
+          --cell-size: 11px;
+          --cell-gap: 2px;
+        }
+
+        .page {
+          padding: 16px 12px 24px;
+        }
+
+        .shell {
+          padding: 0;
+        }
+
+        .totals {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+
+        .toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .segmented {
+          width: 100%;
+          flex-wrap: wrap;
+        }
+
+        .segmented button {
+          flex: 1 1 auto;
+        }
+
+        #provider-controls {
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .heatmap-panel {
+          padding: 14px 0 10px;
+        }
+
+        .heatmap-frame {
+          grid-template-columns: 36px auto;
+        }
+
+        .months-row {
+          font-size: 11px;
+        }
+
+        .stats {
+          flex-direction: column;
+        }
+
+        .stat-card {
+          border-right: 0;
+          border-bottom: 1px solid #f0f0f0;
+        }
+
+        .monthly-comparison-stats {
+          grid-template-columns: 1fr;
+        }
+
+        .legend {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="shell">
+        <header class="header">
+          <div class="header-copy">
+            <p class="eyebrow">Local Agent Usage</p>
+            <h1 class="title">Agent Usage</h1>
+            <p class="subtitle" id="subtitle">
+              Daily token usage extracted from local usage files.
+            </p>
+          </div>
+          <div class="totals">
+            <article class="total-card">
+              <p class="total-label">Input Tokens</p>
+              <p class="total-value" id="input-total">0</p>
+            </article>
+            <article class="total-card">
+              <p class="total-label">Output Tokens</p>
+              <p class="total-value" id="output-total">0</p>
+            </article>
+            <article class="total-card">
+              <p class="total-label">Total Tokens</p>
+              <p class="total-value" id="token-total">0</p>
+            </article>
+          </div>
+        </header>
+
+        <div class="toolbar">
+          <div class="segmented" id="provider-controls" hidden></div>
+          <div class="toolbar-row">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <div class="segmented" id="range-controls"></div>
+              <div class="segmented" id="metric-controls"></div>
+            </div>
+            <div class="meta-note" id="range-note"></div>
+          </div>
+        </div>
+
+        <section class="heatmap-panel">
+          <div class="heatmap-scroll">
+            <div class="heatmap-frame">
+              <div class="weekday-column" id="weekday-column"></div>
+              <div class="grid-stack">
+                <div class="months-row" id="months-row"></div>
+                <div class="heatmap-grid" id="heatmap-grid"></div>
+              </div>
+            </div>
+          </div>
+          <div class="legend">
+            <span>Less</span>
+            <div class="legend-scale" id="legend-scale"></div>
+            <span>More</span>
+          </div>
+        </section>
+
+        <section class="stats">
+          <article class="stat-card">
+            <p class="stat-label">Average / Day</p>
+            <p class="stat-value" id="average-per-day">0</p>
+            <p class="stat-subvalue" id="average-detail"></p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Most Used Model</p>
+            <p class="stat-value" id="top-model">-</p>
+            <p class="stat-subvalue" id="top-model-detail"></p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Recent Use (Last 30 Days)</p>
+            <p class="stat-value" id="recent-model">-</p>
+            <p class="stat-subvalue" id="recent-model-detail"></p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Longest Streak</p>
+            <p class="stat-value" id="longest-streak">0 days</p>
+            <p class="stat-subvalue" id="longest-streak-detail"></p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Current Streak</p>
+            <p class="stat-value" id="current-streak">0 days</p>
+            <p class="stat-subvalue" id="current-streak-detail"></p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Estimated Cost</p>
+            <p class="stat-value" id="estimated-cost">$0.00</p>
+            <p class="stat-subvalue" id="estimated-cost-detail"></p>
+          </article>
+        </section>
+
+        <section class="heatmap-panel">
+          <div class="section-header">
+            <div>
+              <p class="stat-label" style="margin:0;">Daily Cost</p>
+              <div class="meta-note meta-inline">
+                <span id="cost-table-note"></span>
+                <span class="meta-tooltip-wrap" id="missing-pricing-wrap" hidden>
+                  <button type="button" class="meta-badge" id="missing-pricing-details" aria-label="Show missing pricing models">?</button>
+                  <div class="meta-hovercard" id="missing-pricing-tooltip" role="tooltip"></div>
+                </span>
+              </div>
+            </div>
+            <div class="meta-note" id="pricing-note"></div>
+          </div>
+          <div class="heatmap-scroll">
+            <table class="cost-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Cost</th>
+                  <th>Total Tokens</th>
+                  <th>Input</th>
+                  <th>Cached</th>
+                  <th>Output</th>
+                  <th>Top Model</th>
+                </tr>
+              </thead>
+              <tbody id="cost-table-body"></tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td id="cost-table-total-cost">$0.00</td>
+                  <td id="cost-table-total-tokens">0</td>
+                  <td id="cost-table-total-input">0</td>
+                  <td id="cost-table-total-cached">0</td>
+                  <td id="cost-table-total-output">0</td>
+                  <td id="cost-table-total-models">-</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="heatmap-panel" id="monthly-comparison-section" hidden>
+          <div class="section-header">
+            <div>
+              <p class="stat-label" style="margin:0;" id="monthly-comparison-title">Monthly Spend vs Plan</p>
+              <div class="meta-note" id="monthly-comparison-note"></div>
+            </div>
+            <label class="plan-input-wrap" for="provider-plan-cost-input">
+              <span class="plan-input-label">Monthly Plan</span>
+              <span class="plan-input-shell">
+                <span class="plan-input-prefix">$</span>
+                <input
+                  class="plan-input"
+                  id="provider-plan-cost-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="decimal"
+                />
+              </span>
+            </label>
+          </div>
+
+          <div class="monthly-comparison-stats">
+            <article class="stat-card">
+              <p class="stat-label">Current Month Spend</p>
+              <p class="stat-value" id="monthly-current-spend">$0.00</p>
+              <p class="stat-subvalue" id="monthly-current-spend-detail"></p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Current Month Delta</p>
+              <p class="stat-value" id="monthly-current-delta">$0.00</p>
+              <p class="stat-subvalue" id="monthly-current-delta-detail"></p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Months Over Plan</p>
+              <p class="stat-value" id="monthly-over-count">0</p>
+              <p class="stat-subvalue" id="monthly-over-count-detail"></p>
+            </article>
+          </div>
+
+          <div class="heatmap-scroll">
+            <table class="cost-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Spend</th>
+                  <th>Plan</th>
+                  <th>Delta</th>
+                  <th>Total Tokens</th>
+                  <th>Top Model</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-table-body"></tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td id="monthly-table-total-spend">$0.00</td>
+                  <td id="monthly-table-total-plan">$0.00</td>
+                  <td id="monthly-table-total-delta">$0.00</td>
+                  <td id="monthly-table-total-tokens">0</td>
+                  <td id="monthly-table-total-months">0 month(s)</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <footer class="footer">
+          <div id="scan-summary"></div>
+          <div id="generation-summary"></div>
+        </footer>
+      </section>
+    </main>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script id="report-data" type="application/json">__DATA__</script>
+    <script>
+      const REPORT = JSON.parse(document.getElementById("report-data").textContent);
+
+      const RANGE_OPTIONS = [
+        { key: "90d", label: "90D", days: 90 },
+        { key: "180d", label: "180D", days: 180 },
+        { key: "1y", label: "1Y", mode: "year_to_today" },
+        { key: "all", label: "All", days: null },
+      ];
+      const PLAN_COST_STORAGE_PREFIX = "agent-usage-report.plan-cost";
+      const DEFAULT_PLAN_COSTS = {
+        codex: 200,
+        claude: 200,
+      };
+
+      const METRIC_OPTIONS = [
+        { key: "totalTokens", label: "Total" },
+        { key: "inputTokens", label: "Input" },
+        { key: "outputTokens", label: "Output" },
+        { key: "cachedInputTokens", label: "Cached" },
+        { key: "reasoningTokens", label: "Reasoning" },
+      ];
+
+      const weekdayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const monthLabel = new Intl.DateTimeFormat("en-US", { month: "short" });
+      const fullDayLabel = new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const monthValueLabel = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+
+      function createLegacyProviderReport(report) {
+        return {
+          providerId: report.defaultProvider || "codex",
+          providerLabel: "Codex CLI",
+          providerShortLabel: "Codex",
+          sourceHome: report.sourceHome || report.codexHome || null,
+          days: report.days || [],
+          pricing: report.pricing || {},
+          costTotalsUSD: report.costTotalsUSD || {},
+          scan: report.scan || {},
+        };
+      }
+
+      const LEGACY_PROVIDER_REPORT = createLegacyProviderReport(REPORT);
+      const PROVIDER_REPORTS = REPORT.providers || {
+        [LEGACY_PROVIDER_REPORT.providerId]: LEGACY_PROVIDER_REPORT,
+      };
+      const PROVIDER_ORDER = (
+        REPORT.providerOrder && REPORT.providerOrder.length
+          ? REPORT.providerOrder
+          : Object.keys(PROVIDER_REPORTS)
+      ).filter((providerId) => Boolean(PROVIDER_REPORTS[providerId]));
+      const COMBINED_REPORT = REPORT.combined || LEGACY_PROVIDER_REPORT;
+      const PROVIDER_OPTIONS = [];
+      if (PROVIDER_ORDER.length > 1) {
+        PROVIDER_OPTIONS.push({
+          key: "all",
+          label: (COMBINED_REPORT && COMBINED_REPORT.providerShortLabel) || "All",
+        });
+      }
+      for (const providerId of PROVIDER_ORDER) {
+        const provider = PROVIDER_REPORTS[providerId];
+        PROVIDER_OPTIONS.push({
+          key: providerId,
+          label: provider.providerShortLabel || provider.providerLabel || providerId,
+        });
+      }
+
+      const defaultRange = "all";
+      const defaultProvider =
+        PROVIDER_OPTIONS.find((entry) => entry.key === (REPORT.defaultProvider || ""))
+          ?.key || PROVIDER_OPTIONS[0]?.key || "all";
+      const state = {
+        provider: defaultProvider,
+        range: defaultRange,
+        metric: "totalTokens",
+        providerPlanCosts: {},
+      };
+
+      function getActiveReport() {
+        if (state.provider === "all") {
+          return COMBINED_REPORT;
+        }
+        return PROVIDER_REPORTS[state.provider] || COMBINED_REPORT;
+      }
+
+      function getAllKnownDays(report = getActiveReport()) {
+        return (report.days || []).map((entry) => entry.date).sort();
+      }
+
+      function getFallbackEndDate(report = getActiveReport()) {
+        const knownDays = getAllKnownDays(report);
+        return REPORT.generatedLocalDate || (knownDays.length ? knownDays[knownDays.length - 1] : null);
+      }
+
+      const elements = {
+        subtitle: document.getElementById("subtitle"),
+        providerControls: document.getElementById("provider-controls"),
+        rangeControls: document.getElementById("range-controls"),
+        metricControls: document.getElementById("metric-controls"),
+        rangeNote: document.getElementById("range-note"),
+        weekdayColumn: document.getElementById("weekday-column"),
+        monthsRow: document.getElementById("months-row"),
+        heatmapGrid: document.getElementById("heatmap-grid"),
+        legendScale: document.getElementById("legend-scale"),
+        inputTotal: document.getElementById("input-total"),
+        outputTotal: document.getElementById("output-total"),
+        tokenTotal: document.getElementById("token-total"),
+        averagePerDay: document.getElementById("average-per-day"),
+        averageDetail: document.getElementById("average-detail"),
+        topModel: document.getElementById("top-model"),
+        topModelDetail: document.getElementById("top-model-detail"),
+        recentModel: document.getElementById("recent-model"),
+        recentModelDetail: document.getElementById("recent-model-detail"),
+        longestStreak: document.getElementById("longest-streak"),
+        longestStreakDetail: document.getElementById("longest-streak-detail"),
+        currentStreak: document.getElementById("current-streak"),
+        currentStreakDetail: document.getElementById("current-streak-detail"),
+        estimatedCost: document.getElementById("estimated-cost"),
+        estimatedCostDetail: document.getElementById("estimated-cost-detail"),
+        pricingNote: document.getElementById("pricing-note"),
+        costTableNote: document.getElementById("cost-table-note"),
+        missingPricingWrap: document.getElementById("missing-pricing-wrap"),
+        missingPricingDetails: document.getElementById("missing-pricing-details"),
+        missingPricingTooltip: document.getElementById("missing-pricing-tooltip"),
+        costTableBody: document.getElementById("cost-table-body"),
+        costTableTotalCost: document.getElementById("cost-table-total-cost"),
+        costTableTotalTokens: document.getElementById("cost-table-total-tokens"),
+        costTableTotalInput: document.getElementById("cost-table-total-input"),
+        costTableTotalCached: document.getElementById("cost-table-total-cached"),
+        costTableTotalOutput: document.getElementById("cost-table-total-output"),
+        costTableTotalModels: document.getElementById("cost-table-total-models"),
+        monthlyComparisonSection: document.getElementById("monthly-comparison-section"),
+        monthlyComparisonTitle: document.getElementById("monthly-comparison-title"),
+        monthlyComparisonNote: document.getElementById("monthly-comparison-note"),
+        providerPlanCostInput: document.getElementById("provider-plan-cost-input"),
+        monthlyCurrentSpend: document.getElementById("monthly-current-spend"),
+        monthlyCurrentSpendDetail: document.getElementById("monthly-current-spend-detail"),
+        monthlyCurrentDelta: document.getElementById("monthly-current-delta"),
+        monthlyCurrentDeltaDetail: document.getElementById("monthly-current-delta-detail"),
+        monthlyOverCount: document.getElementById("monthly-over-count"),
+        monthlyOverCountDetail: document.getElementById("monthly-over-count-detail"),
+        monthlyTableBody: document.getElementById("monthly-table-body"),
+        monthlyTableTotalSpend: document.getElementById("monthly-table-total-spend"),
+        monthlyTableTotalPlan: document.getElementById("monthly-table-total-plan"),
+        monthlyTableTotalDelta: document.getElementById("monthly-table-total-delta"),
+        monthlyTableTotalTokens: document.getElementById("monthly-table-total-tokens"),
+        monthlyTableTotalMonths: document.getElementById("monthly-table-total-months"),
+        scanSummary: document.getElementById("scan-summary"),
+        generationSummary: document.getElementById("generation-summary"),
+        tooltip: document.getElementById("tooltip"),
+      };
+
+      function getPlanCostStorageKey(providerId) {
+        return `${PLAN_COST_STORAGE_PREFIX}.${providerId}`;
+      }
+
+      function getDefaultPlanCost(providerId) {
+        return DEFAULT_PLAN_COSTS[providerId] ?? 200;
+      }
+
+      function loadPlanCost(providerId) {
+        try {
+          const stored = window.localStorage.getItem(getPlanCostStorageKey(providerId));
+          const parsed = stored == null ? NaN : Number.parseFloat(stored);
+          if (Number.isFinite(parsed) && parsed >= 0) {
+            return parsed;
+          }
+        } catch {}
+        return getDefaultPlanCost(providerId);
+      }
+
+      function savePlanCost(providerId, value) {
+        try {
+          window.localStorage.setItem(getPlanCostStorageKey(providerId), String(value));
+        } catch {}
+      }
+
+      function getProviderPlanCost(providerId) {
+        if (!(providerId in state.providerPlanCosts)) {
+          state.providerPlanCosts[providerId] = loadPlanCost(providerId);
+        }
+        return state.providerPlanCosts[providerId];
+      }
+
+      function setProviderPlanCost(providerId, value) {
+        state.providerPlanCosts[providerId] = value;
+        savePlanCost(providerId, value);
+      }
+
+      function formatCompactNumber(value) {
+        if (!Number.isFinite(value)) {
+          return "0";
+        }
+        const abs = Math.abs(value);
+        if (abs < 1000) {
+          return Math.round(value).toString();
+        }
+        const units = [
+          { value: 1e12, suffix: "T" },
+          { value: 1e9, suffix: "B" },
+          { value: 1e6, suffix: "M" },
+          { value: 1e3, suffix: "K" },
+        ];
+        for (const unit of units) {
+          if (abs >= unit.value) {
+            const scaled = value / unit.value;
+            const digits = Math.abs(scaled) >= 100 ? 0 : Math.abs(scaled) >= 10 ? 1 : 2;
+            return `${scaled.toFixed(digits).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1")}${unit.suffix}`;
+          }
+        }
+        return value.toString();
+      }
+
+      function formatNumber(value) {
+        return Math.round(value).toLocaleString("en-US");
+      }
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+          minimumFractionDigits: value >= 100 ? 0 : 2,
+          maximumFractionDigits: value >= 100 ? 0 : 2,
+        }).format(value || 0);
+      }
+
+      function formatDate(dateString) {
+        return fullDayLabel.format(new Date(`${dateString}T12:00:00`));
+      }
+
+      function formatMonth(monthString) {
+        return monthValueLabel.format(new Date(`${monthString}-01T12:00:00`));
+      }
+
+      function parseIsoDate(dateString) {
+        return new Date(`${dateString}T12:00:00`);
+      }
+
+      function isoDateString(dateObj) {
+        return dateObj.toISOString().slice(0, 10);
+      }
+
+      function addDays(dateObj, days) {
+        const next = new Date(dateObj);
+        next.setUTCDate(next.getUTCDate() + days);
+        return next;
+      }
+
+      function startOfWeek(dateObj) {
+        const day = dateObj.getUTCDay();
+        const mondayOffset = (day + 6) % 7;
+        return addDays(dateObj, -mondayOffset);
+      }
+
+      function endOfWeek(dateObj) {
+        const day = dateObj.getUTCDay();
+        const sundayOffset = day === 0 ? 0 : 7 - day;
+        return addDays(dateObj, sundayOffset);
+      }
+
+      function startOfCurrentMonthLastYear(dateObj) {
+        return new Date(Date.UTC(dateObj.getUTCFullYear() - 1, dateObj.getUTCMonth(), 1, 12, 0, 0));
+      }
+
+      function getCurrentRange() {
+        const report = getActiveReport();
+        const allKnownDays = getAllKnownDays(report);
+        const option = RANGE_OPTIONS.find((entry) => entry.key === state.range) || RANGE_OPTIONS[0];
+        const fallbackEndDate = getFallbackEndDate(report);
+        const endDate = parseIsoDate(fallbackEndDate);
+        const baselineStart = isoDateString(startOfCurrentMonthLastYear(endDate));
+        if (!option.days || allKnownDays.length === 0) {
+          if (option.key === "all") {
+            return {
+              start: allKnownDays.length ? (allKnownDays[0] < baselineStart ? allKnownDays[0] : baselineStart) : baselineStart,
+              end: fallbackEndDate,
+              label: option.label,
+            };
+          }
+          return {
+            start: allKnownDays.length ? allKnownDays[0] : fallbackEndDate,
+            end: fallbackEndDate,
+            label: option.label,
+          };
+        }
+        if (option.mode === "year_to_today") {
+          return {
+            start: baselineStart,
+            end: fallbackEndDate,
+            label: option.label,
+          };
+        }
+        const startDate = addDays(endDate, -(option.days - 1));
+        return {
+          start: isoDateString(startDate),
+          end: fallbackEndDate,
+          label: option.label,
+        };
+      }
+
+      function getVisibleDays() {
+        const report = getActiveReport();
+        const range = getCurrentRange();
+        return (report.days || []).filter((entry) => entry.date >= range.start && entry.date <= range.end);
+      }
+
+      function getVisibleCalendar() {
+        const range = getCurrentRange();
+        const start = startOfWeek(parseIsoDate(range.start));
+        const end = endOfWeek(parseIsoDate(range.end));
+        const dates = [];
+        for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, 1)) {
+          dates.push(isoDateString(cursor));
+        }
+        return { start: isoDateString(start), end: isoDateString(end), dates };
+      }
+
+      function sumField(days, field) {
+        return days.reduce((total, entry) => total + (entry[field] || 0), 0);
+      }
+
+      function isActivityEntry(entry) {
+        return (entry.totalTokens || 0) > 0 || (entry.displayValue || 0) > 0;
+      }
+
+      function getHeatmapMetricValue(entry) {
+        if (!entry) {
+          return 0;
+        }
+        if (state.metric === "totalTokens" && (entry.totalTokens || 0) <= 0) {
+          return entry.displayValue || 0;
+        }
+        return entry[state.metric] || 0;
+      }
+
+      function getModelTotals(days) {
+        const totals = new Map();
+        for (const entry of days) {
+          const modelTotals = entry.modelTotals || {};
+          for (const [model, value] of Object.entries(modelTotals)) {
+            totals.set(model, (totals.get(model) || 0) + value);
+          }
+        }
+        return [...totals.entries()].sort((a, b) => b[1] - a[1]);
+      }
+
+      function getTopModel(days) {
+        const sorted = getModelTotals(days);
+        return sorted.length ? sorted[0] : null;
+      }
+
+      function getLast30Days(endDateString, days) {
+        const end = parseIsoDate(endDateString);
+        const start = addDays(end, -29);
+        const startString = isoDateString(start);
+        return (days || []).filter((entry) => entry.date >= startString && entry.date <= endDateString);
+      }
+
+      function computeStreaks() {
+        const report = getActiveReport();
+        if (!(report.days || []).length) {
+          return {
+            longestCount: 0,
+            longestEnd: null,
+            currentCount: 0,
+            currentEnd: null,
+          };
+        }
+
+        const activeDates = new Set(
+          report.days
+            .filter((entry) => isActivityEntry(entry))
+            .map((entry) => entry.date)
+        );
+
+        let longestCount = 0;
+        let longestEnd = null;
+        let currentCount = 0;
+        let currentEnd = null;
+        let runCount = 0;
+        let previousDate = null;
+
+        for (const entry of report.days) {
+          if (!activeDates.has(entry.date)) {
+            runCount = 0;
+            previousDate = entry.date;
+            continue;
+          }
+
+          if (!previousDate) {
+            runCount = 1;
+          } else {
+            const prev = parseIsoDate(previousDate);
+            const expected = isoDateString(addDays(prev, 1));
+            runCount = expected === entry.date ? runCount + 1 : 1;
+          }
+
+          if (runCount >= longestCount) {
+            longestCount = runCount;
+            longestEnd = entry.date;
+          }
+
+          currentCount = runCount;
+          currentEnd = entry.date;
+          previousDate = entry.date;
+        }
+
+        const latestDay = getFallbackEndDate(report);
+        if (currentEnd !== latestDay) {
+          currentCount = 0;
+          currentEnd = latestDay;
+        }
+
+        return { longestCount, longestEnd, currentCount, currentEnd };
+      }
+
+      function quantile(sortedValues, ratio) {
+        if (!sortedValues.length) {
+          return 0;
+        }
+        const index = Math.floor((sortedValues.length - 1) * ratio);
+        return sortedValues[index];
+      }
+
+      function buildThresholds(values) {
+        const positive = values.filter((value) => value > 0).sort((a, b) => a - b);
+        if (!positive.length) {
+          return [0, 0, 0, 0];
+        }
+        const thresholds = [
+          quantile(positive, 0.2),
+          quantile(positive, 0.45),
+          quantile(positive, 0.7),
+          quantile(positive, 0.9),
+        ].map((value) => Math.max(1, value));
+        for (let index = 1; index < thresholds.length; index += 1) {
+          thresholds[index] = Math.max(thresholds[index], thresholds[index - 1]);
+        }
+        return thresholds;
+      }
+
+      function levelForValue(value, thresholds) {
+        if (!value) {
+          return 0;
+        }
+        if (value <= thresholds[0]) {
+          return 1;
+        }
+        if (value <= thresholds[1]) {
+          return 2;
+        }
+        if (value <= thresholds[2]) {
+          return 3;
+        }
+        if (value <= thresholds[3]) {
+          return 4;
+        }
+        return 5;
+      }
+
+      function createSegmentedButtons(container, options, selectedKey, onClick) {
+        container.innerHTML = "";
+        for (const option of options) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = option.label;
+          if (option.key === selectedKey) {
+            button.classList.add("is-active");
+          }
+          button.addEventListener("click", () => onClick(option.key));
+          container.appendChild(button);
+        }
+      }
+
+      function updateTooltip(content, x, y) {
+        elements.tooltip.innerHTML = content;
+        elements.tooltip.classList.add("is-visible");
+
+        const pad = 18;
+        const width = elements.tooltip.offsetWidth;
+        const height = elements.tooltip.offsetHeight;
+        const nextX = Math.min(window.innerWidth - width - pad, x + 16);
+        const nextY = Math.min(window.innerHeight - height - pad, y + 16);
+        elements.tooltip.style.transform = `translate(${Math.max(pad, nextX)}px, ${Math.max(pad, nextY)}px)`;
+      }
+
+      function hideTooltip() {
+        elements.tooltip.classList.remove("is-visible");
+      }
+
+      function renderWeekdayLabels() {
+        elements.weekdayColumn.innerHTML = "";
+        weekdayNames.forEach((name, index) => {
+          const label = document.createElement("div");
+          label.textContent = index === 0 || index === 6 ? name : "";
+          label.className = label.textContent ? "" : "weekday-spacer";
+          elements.weekdayColumn.appendChild(label);
+        });
+      }
+
+      function renderLegend() {
+        elements.legendScale.innerHTML = "";
+        for (let index = 0; index <= 5; index += 1) {
+          const swatch = document.createElement("div");
+          swatch.className = "legend-cell";
+          swatch.style.background = `var(--cell-${index})`;
+          elements.legendScale.appendChild(swatch);
+        }
+      }
+
+      function renderMonths(visibleCalendar, rangeStart) {
+        elements.monthsRow.innerHTML = "";
+        const rootStyle = getComputedStyle(document.documentElement);
+        const cell = parseFloat(rootStyle.getPropertyValue("--cell-size")) || 14;
+        const gap = parseFloat(rootStyle.getPropertyValue("--cell-gap")) || 4;
+        const stride = cell + gap;
+
+        const monthPositions = [];
+        const used = new Set();
+        const startMonth = rangeStart.slice(0, 7);
+        const startIndex = Math.max(visibleCalendar.dates.indexOf(rangeStart), 0);
+        monthPositions.push({
+          columnIndex: Math.floor(startIndex / 7),
+          date: rangeStart,
+        });
+        used.add(startMonth);
+
+        for (let index = 0; index < visibleCalendar.dates.length; index += 1) {
+          const dateKey = visibleCalendar.dates[index];
+          if (dateKey < rangeStart) {
+            continue;
+          }
+          if (!dateKey.endsWith("-01")) {
+            continue;
+          }
+          const month = dateKey.slice(0, 7);
+          if (used.has(month)) {
+            continue;
+          }
+          used.add(month);
+          monthPositions.push({
+            columnIndex: Math.floor(index / 7),
+            date: dateKey,
+          });
+        }
+
+        for (const entry of monthPositions) {
+          const label = document.createElement("div");
+          label.className = "month-label";
+          label.textContent = monthLabel.format(parseIsoDate(entry.date));
+          label.style.left = `${entry.columnIndex * stride}px`;
+          elements.monthsRow.appendChild(label);
+        }
+      }
+
+      function renderHeatmap() {
+        const activeReport = getActiveReport();
+        const dataByDay = new Map((activeReport.days || []).map((entry) => [entry.date, entry]));
+        const visibleDays = getVisibleDays();
+        const visibleCalendar = getVisibleCalendar();
+        const range = getCurrentRange();
+        const values = visibleDays.map((entry) => getHeatmapMetricValue(entry));
+        const thresholds = buildThresholds(values);
+
+        const visibleSet = new Set(visibleDays.map((entry) => entry.date));
+        const weekColumns = [];
+
+        for (let index = 0; index < visibleCalendar.dates.length; index += 7) {
+          const week = [];
+          for (let row = 0; row < 7; row += 1) {
+            const dateKey = visibleCalendar.dates[index + row];
+            const entry = dataByDay.get(dateKey);
+            const isPadding = !visibleSet.has(dateKey);
+            const value = entry ? getHeatmapMetricValue(entry) : 0;
+            week.push({
+              date: dateKey,
+              entry,
+              isPadding,
+              value,
+              level: levelForValue(value, thresholds),
+            });
+          }
+          weekColumns.push(week);
+        }
+
+        elements.heatmapGrid.innerHTML = "";
+        for (const week of weekColumns) {
+          for (const day of week) {
+            const cell = document.createElement("div");
+            cell.className = "day-cell";
+            if (day.isPadding) {
+              cell.classList.add("is-padding");
+            }
+            cell.dataset.level = String(day.level);
+
+            if (!day.isPadding && day.entry) {
+              const topModels = Object.entries(day.entry.modelTotals || {})
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([model, value]) => `${model}: ${formatCompactNumber(value)}`)
+                .join("<br />");
+
+              const isActivityOnly = (day.entry.totalTokens || 0) <= 0 && (day.entry.displayValue || 0) > 0;
+              const tooltipHtml = isActivityOnly
+                ? [
+                    `<p class="tooltip-title">${formatDate(day.date)}</p>`,
+                    `<p class="tooltip-line"><strong>Legacy activity only</strong></p>`,
+                    `<p class="tooltip-line">${formatCompactNumber(day.entry.displayValue || 0)} history event(s)</p>`,
+                    `<p class="tooltip-line">No token or cost totals are available for this older Claude day.</p>`,
+                  ].join("")
+                : [
+                    `<p class="tooltip-title">${formatDate(day.date)}</p>`,
+                    `<p class="tooltip-line"><strong>${formatCompactNumber(day.entry.totalTokens)}</strong> total tokens</p>`,
+                    `<p class="tooltip-line"><strong>${formatCurrency(day.entry.costUSD || 0)}</strong> estimated cost</p>`,
+                    `<p class="tooltip-line">${formatCompactNumber(day.entry.inputTokens)} input, ${formatCompactNumber(day.entry.cachedInputTokens)} cached, ${formatCompactNumber(day.entry.outputTokens)} output</p>`,
+                    `<p class="tooltip-line">${formatCompactNumber(day.entry.reasoningTokens)} reasoning, ${day.entry.events} token events</p>`,
+                    topModels ? `<p class="tooltip-line"><strong>Models</strong><br />${topModels}</p>` : "",
+                  ].join("");
+
+              cell.addEventListener("mousemove", (event) => {
+                updateTooltip(tooltipHtml, event.clientX, event.clientY);
+              });
+              cell.addEventListener("mouseleave", hideTooltip);
+            }
+
+            elements.heatmapGrid.appendChild(cell);
+          }
+        }
+
+        renderMonths(visibleCalendar, range.start);
+        const providerLabel = activeReport.providerShortLabel || activeReport.providerLabel || state.provider;
+        elements.rangeNote.textContent = `${providerLabel} · ${range.label} view · ${range.start} to ${range.end} · heatmap metric: ${METRIC_OPTIONS.find((entry) => entry.key === state.metric)?.label ?? state.metric}`;
+      }
+
+      function renderSummary() {
+        const activeReport = getActiveReport();
+        const visibleDays = getVisibleDays();
+        const range = getCurrentRange();
+        const rangeStart = parseIsoDate(range.start);
+        const rangeEnd = parseIsoDate(range.end);
+        const rangeLength = Math.round((rangeEnd - rangeStart) / 86400000) + 1;
+
+        const inputTotal = sumField(visibleDays, "inputTokens");
+        const outputTotal = sumField(visibleDays, "outputTokens");
+        const totalTokens = sumField(visibleDays, "totalTokens");
+        const totalCost = visibleDays.reduce((sum, entry) => sum + (entry.costUSD || 0), 0);
+        const activeDays = visibleDays.filter((entry) => entry.totalTokens > 0).length;
+        const averagePerDay = rangeLength > 0 ? totalTokens / rangeLength : 0;
+        const averageActiveDay = activeDays > 0 ? totalTokens / activeDays : 0;
+        const averageCostPerDay = rangeLength > 0 ? totalCost / rangeLength : 0;
+        const averageCostActiveDay = activeDays > 0 ? totalCost / activeDays : 0;
+
+        elements.inputTotal.textContent = formatCompactNumber(inputTotal);
+        elements.outputTotal.textContent = formatCompactNumber(outputTotal);
+        elements.tokenTotal.textContent = formatCompactNumber(totalTokens);
+        elements.averagePerDay.textContent = formatCompactNumber(averagePerDay);
+        elements.averageDetail.textContent = activeDays
+          ? `${activeDays} active days · ${formatCompactNumber(averageActiveDay)} on active days`
+          : "No activity in the selected range";
+
+        const topModel = getTopModel(visibleDays);
+        elements.topModel.textContent = topModel ? topModel[0] : "-";
+        elements.topModelDetail.textContent = topModel
+          ? `${formatCompactNumber(topModel[1])} tokens in the current view`
+          : "No model data available";
+
+        const recentModel = getTopModel(getLast30Days(range.end, activeReport.days || []));
+        elements.recentModel.textContent = recentModel ? recentModel[0] : "-";
+        elements.recentModelDetail.textContent = recentModel
+          ? `${formatCompactNumber(recentModel[1])} tokens over the last 30 days`
+          : "No activity in the last 30 days";
+
+        const streaks = computeStreaks();
+        elements.longestStreak.textContent = `${streaks.longestCount} days`;
+        elements.longestStreakDetail.textContent = streaks.longestEnd
+          ? `ended ${streaks.longestEnd}`
+          : "No streaks yet";
+        elements.currentStreak.textContent = `${streaks.currentCount} days`;
+        elements.currentStreakDetail.textContent = streaks.currentCount
+          ? `through ${streaks.currentEnd}`
+          : "No activity on the latest day";
+
+        elements.estimatedCost.textContent = formatCurrency(totalCost);
+        elements.estimatedCostDetail.textContent = activeDays
+          ? `${formatCurrency(averageCostPerDay)} / calendar day · ${formatCurrency(averageCostActiveDay)} / active day`
+          : "No priced activity in the selected range";
+
+        renderCostTable(visibleDays, totalCost);
+
+        const activeScan = activeReport.scan || {};
+        const activePricing = activeReport.pricing || {};
+        if (state.provider === "all") {
+          elements.subtitle.textContent = `Combined daily token usage across ${PROVIDER_ORDER.length.toLocaleString("en-US")} providers in ${REPORT.timezone}.`;
+        } else {
+          elements.subtitle.textContent = `Daily token usage extracted from ${Number(activeScan.filesScanned || 0).toLocaleString("en-US")} local usage files for ${activeReport.providerLabel || state.provider} in ${REPORT.timezone}.`;
+        }
+        const scanSummaryParts = [
+          `${Number(activeScan.tokenEventsCounted || 0).toLocaleString("en-US")} token events counted`,
+          `${Number(activeScan.nullInfoEventsSkipped || 0).toLocaleString("en-US")} rate-limit-only events skipped`,
+          `${Number(activeScan.syntheticEventsSkipped || 0).toLocaleString("en-US")} synthetic events skipped`,
+        ];
+        if (Number(activeScan.activityOnlyDays || 0) > 0) {
+          scanSummaryParts.push(
+            `${Number(activeScan.activityOnlyDays || 0).toLocaleString("en-US")} legacy activity-only days shown`
+          );
+        }
+        elements.scanSummary.textContent = scanSummaryParts.join(" · ");
+        const missingPricing = (activePricing.missingModels || []).length;
+        elements.pricingNote.textContent = `Pricing: ${activePricing.sourceLabel || "unknown"}`;
+        elements.costTableNote.textContent = missingPricing
+          ? `${missingPricing} model(s) missing pricing and counted at $0.00`
+          : "Estimated from model token pricing";
+        const missingModels = activePricing.missingModels || [];
+        if (elements.missingPricingDetails && elements.missingPricingWrap && elements.missingPricingTooltip) {
+          if (missingModels.length > 0) {
+            elements.missingPricingWrap.hidden = false;
+            elements.missingPricingTooltip.innerHTML = `
+              <strong>Missing pricing models</strong>
+              <ul>${missingModels.map((model) => `<li>${model}</li>`).join("")}</ul>
+            `;
+          } else {
+            elements.missingPricingWrap.hidden = true;
+            elements.missingPricingTooltip.innerHTML = "";
+          }
+        }
+        elements.generationSummary.textContent = `Generated ${REPORT.generatedAtDisplay} on ${REPORT.platform}`;
+      }
+
+      function renderCostTable(visibleDays, totalCost) {
+        const rows = [...visibleDays]
+          .filter((entry) => (entry.totalTokens || 0) > 0)
+          .sort((a, b) => b.date.localeCompare(a.date));
+
+        elements.costTableBody.innerHTML = "";
+        for (const entry of rows) {
+          const row = document.createElement("tr");
+          const topModel = (entry.modelBreakdown || [])[0];
+          row.innerHTML = `
+            <td>${entry.date}</td>
+            <td>${formatCurrency(entry.costUSD || 0)}</td>
+            <td>${formatCompactNumber(entry.totalTokens || 0)}</td>
+            <td>${formatCompactNumber(entry.inputTokens || 0)}</td>
+            <td>${formatCompactNumber(entry.cachedInputTokens || 0)}</td>
+            <td>${formatCompactNumber(entry.outputTokens || 0)}</td>
+            <td>${topModel ? `${topModel.name} (${formatCurrency(topModel.costUSD || 0)})` : "-"}</td>
+          `;
+          elements.costTableBody.appendChild(row);
+        }
+
+        const modelCount = new Set();
+        for (const entry of visibleDays) {
+          for (const model of Object.keys(entry.modelTotals || {})) {
+            modelCount.add(model);
+          }
+        }
+
+        elements.costTableTotalCost.textContent = formatCurrency(totalCost);
+        elements.costTableTotalTokens.textContent = formatCompactNumber(
+          visibleDays.reduce((sum, entry) => sum + (entry.totalTokens || 0), 0)
+        );
+        elements.costTableTotalInput.textContent = formatCompactNumber(
+          visibleDays.reduce((sum, entry) => sum + (entry.inputTokens || 0), 0)
+        );
+        elements.costTableTotalCached.textContent = formatCompactNumber(
+          visibleDays.reduce((sum, entry) => sum + (entry.cachedInputTokens || 0), 0)
+        );
+        elements.costTableTotalOutput.textContent = formatCompactNumber(
+          visibleDays.reduce((sum, entry) => sum + (entry.outputTokens || 0), 0)
+        );
+        elements.costTableTotalModels.textContent = `${modelCount.size} model(s)`;
+      }
+
+      function renderMonthlyComparison() {
+        if (!elements.monthlyComparisonSection) {
+          return;
+        }
+
+        const activeReport = getActiveReport();
+        const comparisonProviderId =
+          activeReport && (activeReport.providerId === "codex" || activeReport.providerId === "claude")
+            ? activeReport.providerId
+            : null;
+        const comparisonReport = comparisonProviderId ? PROVIDER_REPORTS[comparisonProviderId] : null;
+        const monthlyRows = [...((comparisonReport && comparisonReport.monthly) || [])].sort((a, b) =>
+          b.month.localeCompare(a.month)
+        );
+        const shouldShow =
+          comparisonProviderId &&
+          monthlyRows.length > 0;
+
+        elements.monthlyComparisonSection.hidden = !shouldShow;
+        if (!shouldShow) {
+          return;
+        }
+
+        const providerLabel = comparisonReport.providerLabel || comparisonProviderId;
+        const planCost = Math.max(getProviderPlanCost(comparisonProviderId), 0);
+        if (elements.monthlyComparisonTitle) {
+          elements.monthlyComparisonTitle.textContent = `${providerLabel} Monthly Spend vs Plan`;
+        }
+        if (elements.providerPlanCostInput) {
+          elements.providerPlanCostInput.value = String(Number(planCost.toFixed(2)));
+        }
+
+        const currentMonth = monthlyRows[0];
+        const currentDelta = (currentMonth?.costUSD || 0) - planCost;
+        const monthsOver = monthlyRows.filter((entry) => (entry.costUSD || 0) > planCost).length;
+        const totalSpend = monthlyRows.reduce((sum, entry) => sum + (entry.costUSD || 0), 0);
+        const totalPlan = monthlyRows.length * planCost;
+        const totalDelta = totalSpend - totalPlan;
+        const totalTokens = monthlyRows.reduce((sum, entry) => sum + (entry.totalTokens || 0), 0);
+
+        elements.monthlyComparisonNote.textContent = `${monthlyRows.length} month(s) of ${providerLabel} spend compared against an editable monthly plan cost.`;
+        elements.monthlyCurrentSpend.textContent = formatCurrency(currentMonth?.costUSD || 0);
+        elements.monthlyCurrentSpendDetail.textContent = currentMonth
+          ? `${formatMonth(currentMonth.month)} · ${formatCompactNumber(currentMonth.totalTokens || 0)} tokens`
+          : "No monthly data";
+        elements.monthlyCurrentDelta.textContent = formatCurrency(Math.abs(currentDelta));
+        elements.monthlyCurrentDelta.classList.toggle("delta-over", currentDelta > 0);
+        elements.monthlyCurrentDelta.classList.toggle("delta-under", currentDelta < 0);
+        elements.monthlyCurrentDeltaDetail.textContent = currentMonth
+          ? currentDelta > 0
+            ? `${formatMonth(currentMonth.month)} is over plan by ${formatCurrency(currentDelta)}`
+            : currentDelta < 0
+              ? `${formatMonth(currentMonth.month)} is under plan by ${formatCurrency(Math.abs(currentDelta))}`
+              : `${formatMonth(currentMonth.month)} matches the plan`
+          : "No monthly data";
+        elements.monthlyOverCount.textContent = monthsOver.toLocaleString("en-US");
+        elements.monthlyOverCountDetail.textContent = `${(monthlyRows.length - monthsOver).toLocaleString("en-US")} month(s) at or under plan`;
+
+        elements.monthlyTableBody.innerHTML = "";
+        for (const entry of monthlyRows) {
+          const row = document.createElement("tr");
+          const delta = (entry.costUSD || 0) - planCost;
+          const topModel = (entry.modelBreakdown || [])[0];
+          const deltaClass = delta > 0 ? "delta-over" : delta < 0 ? "delta-under" : "";
+          row.innerHTML = `
+            <td>${formatMonth(entry.month)}</td>
+            <td>${formatCurrency(entry.costUSD || 0)}</td>
+            <td>${formatCurrency(planCost)}</td>
+            <td class="${deltaClass}">${delta === 0 ? formatCurrency(0) : `${delta > 0 ? "+" : "-"}${formatCurrency(Math.abs(delta))}`}</td>
+            <td>${formatCompactNumber(entry.totalTokens || 0)}</td>
+            <td>${topModel ? `${topModel.name} (${formatCurrency(topModel.costUSD || 0)})` : "-"}</td>
+          `;
+          elements.monthlyTableBody.appendChild(row);
+        }
+
+        elements.monthlyTableTotalSpend.textContent = formatCurrency(totalSpend);
+        elements.monthlyTableTotalPlan.textContent = formatCurrency(totalPlan);
+        elements.monthlyTableTotalDelta.textContent = `${totalDelta > 0 ? "+" : totalDelta < 0 ? "-" : ""}${formatCurrency(Math.abs(totalDelta))}`;
+        elements.monthlyTableTotalDelta.classList.toggle("delta-over", totalDelta > 0);
+        elements.monthlyTableTotalDelta.classList.toggle("delta-under", totalDelta < 0);
+        elements.monthlyTableTotalTokens.textContent = formatCompactNumber(totalTokens);
+        elements.monthlyTableTotalMonths.textContent = `${monthlyRows.length} month(s)`;
+      }
+
+      function renderControls() {
+        if (elements.providerControls) {
+          if (PROVIDER_OPTIONS.length > 1) {
+            elements.providerControls.hidden = false;
+            createSegmentedButtons(
+              elements.providerControls,
+              PROVIDER_OPTIONS,
+              state.provider,
+              (key) => {
+                state.provider = key;
+                render();
+              }
+            );
+          } else {
+            elements.providerControls.hidden = true;
+            elements.providerControls.innerHTML = "";
+          }
+        }
+
+        createSegmentedButtons(elements.rangeControls, RANGE_OPTIONS, state.range, (key) => {
+          state.range = key;
+          render();
+        });
+
+        createSegmentedButtons(elements.metricControls, METRIC_OPTIONS, state.metric, (key) => {
+          state.metric = key;
+          render();
+        });
+      }
+
+      function render() {
+        renderControls();
+        renderWeekdayLabels();
+        renderLegend();
+        renderHeatmap();
+        renderSummary();
+        renderMonthlyComparison();
+      }
+
+      if (elements.providerPlanCostInput) {
+        elements.providerPlanCostInput.addEventListener("input", (event) => {
+          const activeReport = getActiveReport();
+          const comparisonProviderId =
+            activeReport && (activeReport.providerId === "codex" || activeReport.providerId === "claude")
+              ? activeReport.providerId
+              : null;
+          if (!comparisonProviderId) {
+            return;
+          }
+          const nextValue = Number.parseFloat(event.target.value);
+          const value = Number.isFinite(nextValue) && nextValue >= 0 ? nextValue : 0;
+          setProviderPlanCost(comparisonProviderId, value);
+          renderMonthlyComparison();
+        });
+      }
+
+      window.addEventListener("resize", render);
+      render();
+    </script>
+  </body>
+</html>
