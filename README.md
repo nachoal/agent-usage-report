@@ -3,12 +3,14 @@
 `agent-usage-report` scans local agent usage data on your machine and generates a self-contained HTML report you can open directly in the browser.
 
 Current providers:
+
 - Codex
 - Claude Code
 - OpenCode
 - Pi Coding Agent
 
 Features:
+
 - GitHub-style daily heatmap
 - Per-provider and combined views
 - Estimated token-cost reporting
@@ -52,6 +54,7 @@ agent-usage-report \
 ```
 
 Flags:
+
 - `--codex-home`: Codex home directory
 - `--claude-config-dir`: Claude config directory or comma-separated directories
 - `--opencode-dir`: OpenCode data directory

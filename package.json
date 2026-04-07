@@ -1,44 +1,53 @@
 {
   "name": "agent-usage-report",
   "version": "0.1.2",
-  "type": "module",
   "description": "Local agent usage report generator for Codex, Claude Code, OpenCode, and Pi Coding Agent.",
-  "author": "Ignacio Alonso",
-  "license": "MIT",
-  "bin": {
-    "agent-usage-report": "./dist/cli.js"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "engines": {
-    "node": ">=22"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nachoal/agent-usage-report.git"
-  },
   "homepage": "https://github.com/nachoal/agent-usage-report",
   "bugs": {
     "url": "https://github.com/nachoal/agent-usage-report/issues"
   },
-  "packageManager": "pnpm@10.30.3",
+  "license": "MIT",
+  "author": "Ignacio Alonso",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nachoal/agent-usage-report.git"
+  },
+  "bin": {
+    "agent-usage-report": "./dist/cli.js"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist"
+  ],
+  "type": "module",
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json && cp src/template.html dist/template.html",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "spellcheck": "typos",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm run typecheck && pnpm run test && pnpm run build"
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run spellcheck && pnpm run test && pnpm run build"
+  },
+  "dependencies": {
+    "picocolors": "^1.1.1"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^8.0.0",
+    "@ocular-d/typos-bin": "^1.45.0",
     "@types/node": "^24.10.1",
+    "eslint": "^9.39.1",
+    "oxfmt": "^0.44.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.0"
   },
-  "dependencies": {
-    "picocolors": "^1.1.1"
-  }
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.30.3"
 }

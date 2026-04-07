@@ -1,19 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2023",
+    "rootDir": ".",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
-    "rootDir": ".",
+    "resolveJsonModule": true,
+    "types": ["node", "vitest/globals"],
     "strict": true,
     "noUncheckedIndexedAccess": false,
+    "declaration": true,
+    "outDir": "dist",
+    "sourceMap": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "sourceMap": true,
-    "types": ["node", "vitest/globals"]
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }

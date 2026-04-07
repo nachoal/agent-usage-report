@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
-import { readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir, platform as osPlatform, release as osRelease } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,12 +32,7 @@ const MODEL_ALIASES: Record<string, string> = {
   "gpt-5-codex": "gpt-5",
   "gpt-5.3-codex": "gpt-5.2-codex",
 };
-const MODEL_PREFIXES = [
-  "openai/",
-  "azure/",
-  "openrouter/openai/",
-  "chatgpt/",
-];
+const MODEL_PREFIXES = ["openai/", "azure/", "openrouter/openai/", "chatgpt/"];
 const FREE_MODEL_PRICING = {
   inputCostPerMToken: 0,
   cachedInputCostPerMToken: 0,
@@ -48,12 +43,32 @@ const BUILTIN_MODEL_PRICING: Record<
   { inputCostPerMToken: number; cachedInputCostPerMToken: number; outputCostPerMToken: number }
 > = {
   "gpt-5": { inputCostPerMToken: 1.25, cachedInputCostPerMToken: 0.125, outputCostPerMToken: 10 },
-  "gpt-5.1-codex": { inputCostPerMToken: 1.25, cachedInputCostPerMToken: 0.125, outputCostPerMToken: 10 },
-  "gpt-5.1-codex-max": { inputCostPerMToken: 1.25, cachedInputCostPerMToken: 0.125, outputCostPerMToken: 10 },
-  "gpt-5.1-codex-mini": { inputCostPerMToken: 0.25, cachedInputCostPerMToken: 0.025, outputCostPerMToken: 2 },
+  "gpt-5.1-codex": {
+    inputCostPerMToken: 1.25,
+    cachedInputCostPerMToken: 0.125,
+    outputCostPerMToken: 10,
+  },
+  "gpt-5.1-codex-max": {
+    inputCostPerMToken: 1.25,
+    cachedInputCostPerMToken: 0.125,
+    outputCostPerMToken: 10,
+  },
+  "gpt-5.1-codex-mini": {
+    inputCostPerMToken: 0.25,
+    cachedInputCostPerMToken: 0.025,
+    outputCostPerMToken: 2,
+  },
   "gpt-5.2": { inputCostPerMToken: 1.75, cachedInputCostPerMToken: 0.175, outputCostPerMToken: 14 },
-  "gpt-5.2-codex": { inputCostPerMToken: 1.75, cachedInputCostPerMToken: 0.175, outputCostPerMToken: 14 },
-  "gpt-5.3-codex": { inputCostPerMToken: 1.75, cachedInputCostPerMToken: 0.175, outputCostPerMToken: 14 },
+  "gpt-5.2-codex": {
+    inputCostPerMToken: 1.75,
+    cachedInputCostPerMToken: 0.175,
+    outputCostPerMToken: 14,
+  },
+  "gpt-5.3-codex": {
+    inputCostPerMToken: 1.75,
+    cachedInputCostPerMToken: 0.175,
+    outputCostPerMToken: 14,
+  },
   "gpt-5.4": { inputCostPerMToken: 2.5, cachedInputCostPerMToken: 0.25, outputCostPerMToken: 15 },
 };
 const SCAN_OUTPUT_KEYS = [
@@ -258,10 +273,10 @@ function createEmptyScanStats(): Record<ScanKey, number> {
 }
 
 interface CliStatusReporter {
-  step(message: string): void;
-  success(message: string): void;
-  skip(message: string): void;
-  info(message: string): void;
+  step: (message: string) => void;
+  success: (message: string) => void;
+  skip: (message: string) => void;
+  info: (message: string) => void;
 }
 
 function pluralize(count: number, singular: string, plural = `${singular}s`): string {
@@ -291,7 +306,9 @@ function formatProviderScanSummary(scan: ProviderScanResult): string {
     );
   }
   if (scan.stats.parseErrors > 0) {
-    extras.push(`${formatCount(scan.stats.parseErrors)} parse ${pluralize(scan.stats.parseErrors, "error")}`);
+    extras.push(
+      `${formatCount(scan.stats.parseErrors)} parse ${pluralize(scan.stats.parseErrors, "error")}`,
+    );
   }
   const suffix = extras.length > 0 ? `, ${extras.join(", ")}` : "";
   return (
@@ -446,7 +463,10 @@ function normalizePiUsage(raw: unknown): UsageTotals {
 
 function normalizeOpenCodeUsage(raw: unknown): UsageTotals {
   const tokens = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
-  const cache = typeof tokens.cache === "object" && tokens.cache !== null ? (tokens.cache as Record<string, unknown>) : {};
+  const cache =
+    typeof tokens.cache === "object" && tokens.cache !== null
+      ? (tokens.cache as Record<string, unknown>)
+      : {};
   const cacheRead = Math.trunc(toNumber(cache.read));
   const cacheWrite = Math.trunc(toNumber(cache.write));
   const input_tokens = Math.trunc(toNumber(tokens.input)) + cacheRead;
@@ -473,7 +493,10 @@ function addUsageTotals(base: UsageTotals | null, delta: UsageTotals): UsageTota
 function subtractUsageTotals(current: UsageTotals, previous: UsageTotals | null): UsageTotals {
   return {
     input_tokens: Math.max(current.input_tokens - (previous?.input_tokens ?? 0), 0),
-    cached_input_tokens: Math.max(current.cached_input_tokens - (previous?.cached_input_tokens ?? 0), 0),
+    cached_input_tokens: Math.max(
+      current.cached_input_tokens - (previous?.cached_input_tokens ?? 0),
+      0,
+    ),
     output_tokens: Math.max(current.output_tokens - (previous?.output_tokens ?? 0), 0),
     reasoning_output_tokens: Math.max(
       current.reasoning_output_tokens - (previous?.reasoning_output_tokens ?? 0),
@@ -527,7 +550,10 @@ function toPerMillion(value: unknown, fallback?: unknown): number {
 
 function isOpenRouterFreeModel(model: string): boolean {
   const normalized = model.trim().toLowerCase();
-  return normalized === "openrouter/free" || (normalized.startsWith("openrouter/") && normalized.endsWith(":free"));
+  return (
+    normalized === "openrouter/free" ||
+    (normalized.startsWith("openrouter/") && normalized.endsWith(":free"))
+  );
 }
 
 interface ResolvedPricing {
@@ -539,7 +565,9 @@ interface ResolvedPricing {
   source: string;
 }
 
-export async function fetchLiteLLMPricingDataset(): Promise<Record<string, Record<string, unknown>>> {
+export async function fetchLiteLLMPricingDataset(): Promise<
+  Record<string, Record<string, unknown>>
+> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
@@ -614,7 +642,8 @@ export function resolveModelPricing(
     }
   }
 
-  const builtin = BUILTIN_MODEL_PRICING[model] ?? (alias ? BUILTIN_MODEL_PRICING[alias] : undefined);
+  const builtin =
+    BUILTIN_MODEL_PRICING[model] ?? (alias ? BUILTIN_MODEL_PRICING[alias] : undefined);
   if (builtin) {
     return {
       requestedModel: model,
@@ -674,7 +703,11 @@ async function listFilesRecursive(root: string, suffix: string): Promise<string[
   return results;
 }
 
-async function scanCodexProvider(codexHome: string, includeArchived: boolean, timeZone: string): Promise<ProviderScanResult> {
+async function scanCodexProvider(
+  codexHome: string,
+  includeArchived: boolean,
+  timeZone: string,
+): Promise<ProviderScanResult> {
   const dailyUsage = new Map<string, DailyUsageAccumulator>();
   const displayValuesByDay = new Map<string, number>();
   const stats = createEmptyScanStats();
@@ -736,7 +769,10 @@ async function processCodexJsonlFile(
     }
 
     const recordType = record.type;
-    const payload = typeof record.payload === "object" && record.payload !== null ? (record.payload as Record<string, unknown>) : {};
+    const payload =
+      typeof record.payload === "object" && record.payload !== null
+        ? (record.payload as Record<string, unknown>)
+        : {};
     const extractedModel = extractCodexModel(payload);
 
     if (recordType === "turn_context") {
@@ -748,7 +784,10 @@ async function processCodexJsonlFile(
     }
 
     if (recordType !== "event_msg" || payload.type !== "token_count") continue;
-    const info = typeof payload.info === "object" && payload.info !== null ? (payload.info as Record<string, unknown>) : null;
+    const info =
+      typeof payload.info === "object" && payload.info !== null
+        ? (payload.info as Record<string, unknown>)
+        : null;
     if (!info) {
       stats.nullInfoEventsSkipped += 1;
       continue;
@@ -795,7 +834,13 @@ async function processCodexJsonlFile(
       isFallbackModel = true;
     }
 
-    addUsage(dailyUsage, dayKeyInTimezone(timestamp, timeZone), rawUsage, eventModel, isFallbackModel);
+    addUsage(
+      dailyUsage,
+      dayKeyInTimezone(timestamp, timeZone),
+      rawUsage,
+      eventModel,
+      isFallbackModel,
+    );
     stats.tokenEventsCounted += 1;
   }
 }
@@ -803,25 +848,41 @@ async function processCodexJsonlFile(
 function extractCodexModel(payload: Record<string, unknown>): string | null {
   const direct = asNonEmptyString(payload.model) ?? asNonEmptyString(payload.model_name);
   if (direct) return direct;
-  const info = typeof payload.info === "object" && payload.info !== null ? (payload.info as Record<string, unknown>) : null;
+  const info =
+    typeof payload.info === "object" && payload.info !== null
+      ? (payload.info as Record<string, unknown>)
+      : null;
   if (info) {
     const infoModel = asNonEmptyString(info.model) ?? asNonEmptyString(info.model_name);
     if (infoModel) return infoModel;
-    const metadata = typeof info.metadata === "object" && info.metadata !== null ? (info.metadata as Record<string, unknown>) : null;
+    const metadata =
+      typeof info.metadata === "object" && info.metadata !== null
+        ? (info.metadata as Record<string, unknown>)
+        : null;
     if (metadata) {
       const metadataModel = asNonEmptyString(metadata.model);
       if (metadataModel) return metadataModel;
     }
   }
-  const metadata = typeof payload.metadata === "object" && payload.metadata !== null ? (payload.metadata as Record<string, unknown>) : null;
+  const metadata =
+    typeof payload.metadata === "object" && payload.metadata !== null
+      ? (payload.metadata as Record<string, unknown>)
+      : null;
   return metadata ? asNonEmptyString(metadata.model) : null;
 }
 
-async function processLegacyJsonFile(filePath: string, stats: Record<ScanKey, number>): Promise<void> {
+async function processLegacyJsonFile(
+  filePath: string,
+  stats: Record<ScanKey, number>,
+): Promise<void> {
   const content = await readFile(filePath, "utf8");
   try {
     const parsed = JSON.parse(content);
-    if (typeof parsed !== "object" || parsed == null || (!("usage" in parsed) && !("token_usage" in parsed))) {
+    if (
+      typeof parsed !== "object" ||
+      parsed == null ||
+      (!("usage" in parsed) && !("token_usage" in parsed))
+    ) {
       stats.unsupportedLegacyFiles += 1;
     }
   } catch {
@@ -834,10 +895,11 @@ function discoverClaudeWorkDirs(): string[] {
     return readdirSync(homedir(), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && entry.name.startsWith(".claude-"))
       .map((entry) => resolve(join(homedir(), entry.name)))
-      .filter((dir) =>
-        existsSync(join(dir, "projects")) ||
-        existsSync(join(dir, "stats-cache.json")) ||
-        existsSync(join(dir, "history.jsonl")),
+      .filter(
+        (dir) =>
+          existsSync(join(dir, "projects")) ||
+          existsSync(join(dir, "stats-cache.json")) ||
+          existsSync(join(dir, "history.jsonl")),
       );
   } catch {
     return [];
@@ -894,7 +956,10 @@ function getClaudeHistoryFiles(configPaths: string[]): string[] {
     .filter((file, index, array) => existsSync(file) && array.indexOf(file) === index);
 }
 
-async function scanClaudeProvider(configPaths: string[], timeZone: string): Promise<ProviderScanResult> {
+async function scanClaudeProvider(
+  configPaths: string[],
+  timeZone: string,
+): Promise<ProviderScanResult> {
   const dailyUsage = new Map<string, DailyUsageAccumulator>();
   const displayValuesByDay = new Map<string, number>();
   const stats = createEmptyScanStats();
@@ -984,8 +1049,12 @@ function distributeTokenComponents(total: number, weights: number[]): number[] {
   const allocated = exact.map((value) => Math.floor(value));
   let remainder = total - allocated.reduce((sum, value) => sum + value, 0);
   const order = exact
-    .map((value, index) => ({ index, fraction: value - allocated[index]!, weight: weights[index]! }))
-    .sort((a, b) => (b.fraction - a.fraction) || (b.weight - a.weight));
+    .map((value, index) => ({
+      index,
+      fraction: value - allocated[index]!,
+      weight: weights[index]!,
+    }))
+    .sort((a, b) => b.fraction - a.fraction || b.weight - a.weight);
   for (const item of order) {
     if (remainder <= 0) break;
     allocated[item.index]! += 1;
@@ -994,18 +1063,24 @@ function distributeTokenComponents(total: number, weights: number[]): number[] {
   return allocated;
 }
 
-function createClaudeStatsCacheUsage(totalTokens: number, usage?: Record<string, unknown>): UsageTotals {
+function createClaudeStatsCacheUsage(
+  totalTokens: number,
+  usage?: Record<string, unknown>,
+): UsageTotals {
   if (totalTokens <= 0) return createEmptyUsageTotals();
-  const [scaledInput, scaledOutput, scaledCacheRead, scaledCacheCreation] = distributeTokenComponents(
-    totalTokens,
-    [
+  const [scaledInput, scaledOutput, scaledCacheRead, scaledCacheCreation] =
+    distributeTokenComponents(totalTokens, [
       Math.trunc(toNumber(usage?.inputTokens)),
       Math.trunc(toNumber(usage?.outputTokens)),
       Math.trunc(toNumber(usage?.cacheReadInputTokens)),
       Math.trunc(toNumber(usage?.cacheCreationInputTokens)),
-    ],
-  );
-  if (scaledInput === 0 && scaledOutput === 0 && scaledCacheRead === 0 && scaledCacheCreation === 0) {
+    ]);
+  if (
+    scaledInput === 0 &&
+    scaledOutput === 0 &&
+    scaledCacheRead === 0 &&
+    scaledCacheCreation === 0
+  ) {
     return {
       input_tokens: totalTokens,
       cached_input_tokens: 0,
@@ -1091,18 +1166,25 @@ async function processClaudeHistoryFile(
 function resolveOpenCodeBaseDir(configuredPath: string | null): string | null {
   const candidates = [];
   if (configuredPath) candidates.push(resolve(configuredPath));
-  if (process.env.OPENCODE_DATA_DIR?.trim()) candidates.push(resolve(process.env.OPENCODE_DATA_DIR.trim()));
+  if (process.env.OPENCODE_DATA_DIR?.trim())
+    candidates.push(resolve(process.env.OPENCODE_DATA_DIR.trim()));
   candidates.push(resolve(join(homedir(), ".local", "share", "opencode")));
   for (const candidate of candidates) {
     if (!existsSync(candidate)) continue;
-    if (existsSync(join(candidate, "opencode.db")) || existsSync(join(candidate, "storage", "message"))) {
+    if (
+      existsSync(join(candidate, "opencode.db")) ||
+      existsSync(join(candidate, "storage", "message"))
+    ) {
       return candidate;
     }
   }
   return null;
 }
 
-async function scanOpenCodeProvider(baseDir: string, timeZone: string): Promise<ProviderScanResult> {
+async function scanOpenCodeProvider(
+  baseDir: string,
+  timeZone: string,
+): Promise<ProviderScanResult> {
   const dailyUsage = new Map<string, DailyUsageAccumulator>();
   const displayValuesByDay = new Map<string, number>();
   const stats = createEmptyScanStats();
@@ -1153,7 +1235,12 @@ function addOpenCodeMessage(
     stats.parseErrors += 1;
     return;
   }
-  addUsage(dailyUsage, dayKeyInTimezone(timestamp, timeZone), usage, asNonEmptyString(message.modelID));
+  addUsage(
+    dailyUsage,
+    dayKeyInTimezone(timestamp, timeZone),
+    usage,
+    asNonEmptyString(message.modelID),
+  );
   stats.tokenEventsCounted += 1;
 }
 
@@ -1182,7 +1269,9 @@ async function processOpenCodeDatabase(
   const { DatabaseSync } = await import("node:sqlite");
   const db = new DatabaseSync(databasePath, { readOnly: true });
   try {
-    const rows = db.prepare("SELECT id, data FROM message ORDER BY time_created ASC").iterate() as Iterable<{ id: string; data: string }>;
+    const rows = db
+      .prepare("SELECT id, data FROM message ORDER BY time_created ASC")
+      .iterate() as Iterable<{ id: string; data: string }>;
     for (const row of rows) {
       try {
         const message = JSON.parse(row.data) as OpenCodeMessage;
@@ -1199,7 +1288,8 @@ async function processOpenCodeDatabase(
 function resolvePiSessionsDir(configuredPath: string | null): string | null {
   const candidates: string[] = [];
   if (configuredPath) candidates.push(resolve(configuredPath));
-  if (process.env.PI_CODING_AGENT_DIR?.trim()) candidates.push(resolve(process.env.PI_CODING_AGENT_DIR.trim()));
+  if (process.env.PI_CODING_AGENT_DIR?.trim())
+    candidates.push(resolve(process.env.PI_CODING_AGENT_DIR.trim()));
   candidates.push(resolve(join(homedir(), ".pi", "agent")));
   for (const candidate of candidates) {
     if (candidate.endsWith("/sessions") && existsSync(candidate)) return candidate;
@@ -1255,12 +1345,18 @@ async function processPiJsonlFile(
       stats.zeroTotalEventsSkipped += 1;
       continue;
     }
-    const timestamp = parseFlexibleTimestamp(record.timestamp) ?? parseFlexibleTimestamp(record.message.timestamp);
+    const timestamp =
+      parseFlexibleTimestamp(record.timestamp) ?? parseFlexibleTimestamp(record.message.timestamp);
     if (!timestamp) {
       stats.parseErrors += 1;
       continue;
     }
-    addUsage(dailyUsage, dayKeyInTimezone(timestamp, timeZone), usage, asNonEmptyString(record.message.model));
+    addUsage(
+      dailyUsage,
+      dayKeyInTimezone(timestamp, timeZone),
+      usage,
+      asNonEmptyString(record.message.model),
+    );
     stats.tokenEventsCounted += 1;
   }
 }
@@ -1276,10 +1372,13 @@ export function providerScanHasUsage(scan: ProviderScanResult): boolean {
 }
 
 export function buildMonthlyRollups(reportDays: DailyReportRow[]): MonthlyReportRow[] {
-  const months = new Map<string, {
-    row: MonthlyReportRow;
-    modelBreakdownIndex: Map<string, ModelBreakdownRow>;
-  }>();
+  const months = new Map<
+    string,
+    {
+      row: MonthlyReportRow;
+      modelBreakdownIndex: Map<string, ModelBreakdownRow>;
+    }
+  >();
 
   for (const day of reportDays) {
     if ((day.totalTokens || 0) <= 0 && (day.costUSD || 0) <= 0) continue;
@@ -1347,10 +1446,18 @@ export function buildMonthlyRollups(reportDays: DailyReportRow[]): MonthlyReport
       existing.isFallbackModel = existing.isFallbackModel || Boolean(modelEntry.isFallbackModel);
       existing.isMissingPricing = existing.isMissingPricing || Boolean(modelEntry.isMissingPricing);
       existing.isAliasPricing = existing.isAliasPricing || Boolean(modelEntry.isAliasPricing);
-      existing.costBreakdownUSD.inputUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.inputUSD ?? 0);
-      existing.costBreakdownUSD.cachedInputUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.cachedInputUSD ?? 0);
-      existing.costBreakdownUSD.outputUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.outputUSD ?? 0);
-      existing.costBreakdownUSD.totalUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.totalUSD ?? 0);
+      existing.costBreakdownUSD.inputUSD += Number(
+        (modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.inputUSD ?? 0,
+      );
+      existing.costBreakdownUSD.cachedInputUSD += Number(
+        (modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.cachedInputUSD ?? 0,
+      );
+      existing.costBreakdownUSD.outputUSD += Number(
+        (modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.outputUSD ?? 0,
+      );
+      existing.costBreakdownUSD.totalUSD += Number(
+        (modelEntry.costBreakdownUSD as CostBreakdown | undefined)?.totalUSD ?? 0,
+      );
       existing.costUSD += Number(modelEntry.costUSD ?? 0);
       month.modelBreakdownIndex.set(name, existing);
     }
@@ -1389,10 +1496,17 @@ function buildProviderReport(
   pricingSourceKind: string,
   pricingSourceLabel: string,
 ): ProviderReport {
-  const allDays = [...new Set([...scan.dailyUsage.keys(), ...scan.displayValuesByDay.keys()])].sort();
+  const allDays = [
+    ...new Set([...scan.dailyUsage.keys(), ...scan.displayValuesByDay.keys()]),
+  ].sort();
   const days: DailyReportRow[] = [];
   const missingPricingModels = new Set<string>();
-  const costTotalsUSD: CostBreakdown = { inputUSD: 0, cachedInputUSD: 0, outputUSD: 0, totalUSD: 0 };
+  const costTotalsUSD: CostBreakdown = {
+    inputUSD: 0,
+    cachedInputUSD: 0,
+    outputUSD: 0,
+    totalUSD: 0,
+  };
 
   for (const dayKey of allDays) {
     const usage = scan.dailyUsage.get(dayKey) ?? createEmptyDailyUsage();
@@ -1446,14 +1560,18 @@ function buildProviderReport(
       events: usage.events,
       costBreakdownUSD,
       costUSD: costBreakdownUSD.totalUSD,
-      modelTotals: Object.fromEntries(modelBreakdown.map((entry) => [entry.name, Number(entry.totalTokens)])),
+      modelTotals: Object.fromEntries(
+        modelBreakdown.map((entry) => [entry.name, Number(entry.totalTokens)]),
+      ),
       modelBreakdown,
       displayValue: scan.displayValuesByDay.get(dayKey) ?? 0,
     });
   }
 
   const scanStats = serializeScanStats(scan.stats);
-  scanStats.activityOnlyDays = [...scan.displayValuesByDay.keys()].filter((dayKey) => !scan.dailyUsage.has(dayKey)).length;
+  scanStats.activityOnlyDays = [...scan.displayValuesByDay.keys()].filter(
+    (dayKey) => !scan.dailyUsage.has(dayKey),
+  ).length;
 
   return {
     providerId: scan.providerId,
@@ -1476,7 +1594,12 @@ function buildProviderReport(
 export function buildCombinedReport(providerReports: ProviderReport[]): ProviderReport {
   const combinedByDay = new Map<string, DailyReportRow>();
   const missingModels = new Set<string>();
-  const costTotalsUSD: CostBreakdown = { inputUSD: 0, cachedInputUSD: 0, outputUSD: 0, totalUSD: 0 };
+  const costTotalsUSD: CostBreakdown = {
+    inputUSD: 0,
+    cachedInputUSD: 0,
+    outputUSD: 0,
+    totalUSD: 0,
+  };
   const pricingSources = new Set<string>();
   const pricingLabels = new Set<string>();
   const pricingUrls = new Set<string>();
@@ -1545,22 +1668,35 @@ export function buildCombinedReport(providerReports: ProviderReport[]): Provider
           costUSD: 0,
         };
         merged.inputTokens = Number(merged.inputTokens) + Number(modelEntry.inputTokens ?? 0);
-        merged.cachedInputTokens = Number(merged.cachedInputTokens) + Number(modelEntry.cachedInputTokens ?? 0);
+        merged.cachedInputTokens =
+          Number(merged.cachedInputTokens) + Number(modelEntry.cachedInputTokens ?? 0);
         merged.outputTokens = Number(merged.outputTokens) + Number(modelEntry.outputTokens ?? 0);
-        merged.reasoningTokens = Number(merged.reasoningTokens) + Number(modelEntry.reasoningTokens ?? 0);
+        merged.reasoningTokens =
+          Number(merged.reasoningTokens) + Number(modelEntry.reasoningTokens ?? 0);
         merged.totalTokens = Number(merged.totalTokens) + Number(modelEntry.totalTokens ?? 0);
         merged.events = Number(merged.events) + Number(modelEntry.events ?? 0);
-        merged.isFallbackModel = Boolean(merged.isFallbackModel) || Boolean(modelEntry.isFallbackModel);
-        merged.isMissingPricing = Boolean(merged.isMissingPricing) || Boolean(modelEntry.isMissingPricing);
-        merged.isAliasPricing = Boolean(merged.isAliasPricing) || Boolean(modelEntry.isAliasPricing);
-        (merged.costBreakdownUSD as CostBreakdown).inputUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown).inputUSD);
-        (merged.costBreakdownUSD as CostBreakdown).cachedInputUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown).cachedInputUSD);
-        (merged.costBreakdownUSD as CostBreakdown).outputUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown).outputUSD);
-        (merged.costBreakdownUSD as CostBreakdown).totalUSD += Number((modelEntry.costBreakdownUSD as CostBreakdown).totalUSD);
+        merged.isFallbackModel =
+          Boolean(merged.isFallbackModel) || Boolean(modelEntry.isFallbackModel);
+        merged.isMissingPricing =
+          Boolean(merged.isMissingPricing) || Boolean(modelEntry.isMissingPricing);
+        merged.isAliasPricing =
+          Boolean(merged.isAliasPricing) || Boolean(modelEntry.isAliasPricing);
+        (merged.costBreakdownUSD as CostBreakdown).inputUSD += Number(
+          (modelEntry.costBreakdownUSD as CostBreakdown).inputUSD,
+        );
+        (merged.costBreakdownUSD as CostBreakdown).cachedInputUSD += Number(
+          (modelEntry.costBreakdownUSD as CostBreakdown).cachedInputUSD,
+        );
+        (merged.costBreakdownUSD as CostBreakdown).outputUSD += Number(
+          (modelEntry.costBreakdownUSD as CostBreakdown).outputUSD,
+        );
+        (merged.costBreakdownUSD as CostBreakdown).totalUSD += Number(
+          (modelEntry.costBreakdownUSD as CostBreakdown).totalUSD,
+        );
         merged.costUSD = Number(merged.costUSD) + Number(modelEntry.costUSD ?? 0);
-        if (merged.resolvedPricingModel == null) merged.resolvedPricingModel = modelEntry.resolvedPricingModel ?? null;
-        if (merged.pricingSource == null) merged.pricingSource = modelEntry.pricingSource ?? null;
-        if (merged.pricingPerMToken == null) merged.pricingPerMToken = modelEntry.pricingPerMToken ?? null;
+        merged.resolvedPricingModel ??= modelEntry.resolvedPricingModel ?? null;
+        merged.pricingSource ??= modelEntry.pricingSource ?? null;
+        merged.pricingPerMToken ??= modelEntry.pricingPerMToken ?? null;
         modelIndex.set(name, merged);
       }
       existing.modelBreakdown = [...modelIndex.values()].sort(
@@ -1593,7 +1729,10 @@ export function buildCombinedReport(providerReports: ProviderReport[]): Provider
   };
 }
 
-export async function buildReportPayload(providerScans: ProviderScanResult[], timeZone: string): Promise<Record<string, unknown>> {
+export async function buildReportPayload(
+  providerScans: ProviderScanResult[],
+  timeZone: string,
+): Promise<Record<string, unknown>> {
   let pricingDataset: Record<string, Record<string, unknown>> | null = null;
   let pricingSourceKind = "builtin-fallback";
   let pricingSourceLabel = "Built-in fallback pricing";
@@ -1609,10 +1748,13 @@ export async function buildReportPayload(providerScans: ProviderScanResult[], ti
     buildProviderReport(scan, pricingDataset, pricingSourceKind, pricingSourceLabel),
   );
   const combined = buildCombinedReport(providerReports);
-  const providers = Object.fromEntries(providerReports.map((report) => [report.providerId, report]));
+  const providers = Object.fromEntries(
+    providerReports.map((report) => [report.providerId, report]),
+  );
   const providerOrder = providerReports.map((report) => report.providerId);
   const defaultProvider = providerOrder[0] ?? DEFAULT_PROVIDER_ID;
-  const defaultProviderReport = (providers[defaultProvider] as ProviderReport | undefined) ?? combined;
+  const defaultProviderReport =
+    (providers[defaultProvider] as ProviderReport | undefined) ?? combined;
   const now = new Date();
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
@@ -1627,7 +1769,9 @@ export async function buildReportPayload(providerScans: ProviderScanResult[], ti
       minute: "2-digit",
       timeZone,
       timeZoneName: "short",
-    }).format(now).replace(",", ""),
+    })
+      .format(now)
+      .replace(",", ""),
     generatedLocalDate: dayKeyInTimezone(now, timeZone),
     platform: `${osPlatform()} ${osRelease()} · Node ${process.version.replace(/^v/, "")}`,
     defaultProvider,
@@ -1767,7 +1911,8 @@ export async function generateReport(
   status?: CliStatusReporter,
 ): Promise<Record<string, unknown>> {
   const codexHome = resolve(args.codexHome);
-  if (!existsSync(codexHome)) throw new Error(`Configured usage source does not exist: ${codexHome}`);
+  if (!existsSync(codexHome))
+    throw new Error(`Configured usage source does not exist: ${codexHome}`);
 
   const claudeConfigPaths = resolveClaudeConfigPaths(args.claudeConfigDir);
   const openCodeBaseDir = resolveOpenCodeBaseDir(args.opencodeDir);
@@ -1782,14 +1927,20 @@ export async function generateReport(
   providerScans.push(codexScan);
   status?.success(formatProviderScanSummary(codexScan));
 
-  if (claudeProjectDirs.length > 0 || claudeStatsCacheFiles.length > 0 || claudeHistoryFiles.length > 0) {
+  if (
+    claudeProjectDirs.length > 0 ||
+    claudeStatsCacheFiles.length > 0 ||
+    claudeHistoryFiles.length > 0
+  ) {
     status?.step(`Scanning Claude Code data in ${summarizePaths(claudeConfigPaths)}`);
     const claudeScan = await scanClaudeProvider(claudeConfigPaths, args.timezone);
     if (providerScanHasUsage(claudeScan)) {
       providerScans.push(claudeScan);
       status?.success(formatProviderScanSummary(claudeScan));
     } else {
-      status?.skip(`Claude Code data was found in ${summarizePaths(claudeConfigPaths)} but produced no usage rows`);
+      status?.skip(
+        `Claude Code data was found in ${summarizePaths(claudeConfigPaths)} but produced no usage rows`,
+      );
     }
   } else {
     status?.skip(`Claude Code data not found in ${summarizePaths(claudeConfigPaths)}`);
@@ -1841,11 +1992,19 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   const outputJson = resolve(args.outputJson);
   await writeOutput(report, outputHtml, outputJson, status);
   const combined = report.combined as ProviderReport;
-  const primaryScan = (report.providers as Record<string, ProviderReport>)[DEFAULT_PROVIDER_ID]?.scan ?? createEmptyScanStats();
+  const primaryScan =
+    (report.providers as Record<string, ProviderReport>)[DEFAULT_PROVIDER_ID]?.scan ??
+    createEmptyScanStats();
   status.success("Report generation complete");
-  status.info(`Scanned ${formatCount(primaryScan.filesScanned)} local usage ${pluralize(primaryScan.filesScanned, "file")} from ${resolve(args.codexHome)}`);
-  status.info(`Counted ${formatCount(primaryScan.tokenEventsCounted)} token ${pluralize(primaryScan.tokenEventsCounted, "event")} across ${formatCount(combined.days.length)} ${pluralize(combined.days.length, "day")}`);
-  status.info(`Total tokens in extracted dataset: ${formatCount(combined.days.reduce((sum, day) => sum + day.totalTokens, 0))}`);
+  status.info(
+    `Scanned ${formatCount(primaryScan.filesScanned)} local usage ${pluralize(primaryScan.filesScanned, "file")} from ${resolve(args.codexHome)}`,
+  );
+  status.info(
+    `Counted ${formatCount(primaryScan.tokenEventsCounted)} token ${pluralize(primaryScan.tokenEventsCounted, "event")} across ${formatCount(combined.days.length)} ${pluralize(combined.days.length, "day")}`,
+  );
+  status.info(
+    `Total tokens in extracted dataset: ${formatCount(combined.days.reduce((sum, day) => sum + day.totalTokens, 0))}`,
+  );
   status.info(`HTML report: ${outputHtml}`);
   status.info(`JSON data: ${outputJson}`);
 }

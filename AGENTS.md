@@ -1,11 +1,13 @@
 # AGENTS.md - agent-usage-report
 
 ## Scope
+
 - This is a standalone TypeScript CLI package intended for `pnpm`, `bun`, `node`, and eventual `npx` usage.
 - The public repository is `https://github.com/nachoal/agent-usage-report`
 - The npm package is `agent-usage-report`
 
 ## Purpose
+
 - Generate a self-contained local agent usage HTML report and JSON payload
 - Maintain feature parity with the Python implementation in the sibling local project
 - Support current local providers:
@@ -22,6 +24,7 @@
   - Claude `history.jsonl` activity-only fallback days
 
 ## Primary Entry Points
+
 - CLI entry: `src/cli.ts`
 - Core logic: `src/generator.ts`
 - HTML template: `src/template.html`
@@ -29,6 +32,7 @@
 - Public package metadata: `package.json`
 
 ## Build And Test
+
 - Install: `pnpm install`
 - Typecheck: `pnpm run typecheck`
 - Test: `pnpm run test`
@@ -38,11 +42,12 @@
   - `bun run src/cli.ts --help`
 
 ## Packaging Expectations
+
 - Package name: `agent-usage-report`
 - Intended runner UX:
   - `npx agent-usage-report@latest`
   - `bunx agent-usage-report@latest`
-- Current published version: `0.1.1`
+- Current published version: `0.1.2`
 - Publishable files should stay minimal:
   - keep `dist`, `README.md`, and `LICENSE`
   - do not publish `AGENTS.md`
@@ -54,6 +59,7 @@
   - `dist/template.html`
 
 ## Current CLI Surface
+
 - `--codex-home`
 - `--claude-config-dir`
 - `--opencode-dir`
@@ -64,6 +70,7 @@
 - `--skip-archived`
 
 ## Implementation Notes
+
 - Keep the JSON payload shape aligned with the Python project:
   - `schemaVersion`
   - `providerOrder`
@@ -88,6 +95,7 @@
   - Claude activity-only fallback from `history.jsonl`
 
 ## Editing Guidance
+
 - Prefer targeted edits in `src/generator.ts` until the port stabilizes
 - If changing the UI, edit `src/template.html` or the template-loading flow carefully
 - After behavior changes:
@@ -106,6 +114,7 @@
   - smoke test with `npx agent-usage-report@latest --help`
 
 ## Non-Goals
+
 - Do not turn this into a monorepo unless clearly needed
 - Do not add a backend here
 - Do not reduce current provider/report parity with the Python version

@@ -1,0 +1,9 @@
+[default]
+locale = "en-us"
+
+[default.extend-words]
+color = "color"
+
+[files]
+ignore-hidden = false
+extend-exclude = [".git", "dist", "node_modules", "pnpm-lock.yaml"]

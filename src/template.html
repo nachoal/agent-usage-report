@@ -1,11 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Agent Usage Report</title>
     <style>
       :root {
@@ -42,12 +39,7 @@
       body {
         background: var(--bg);
         color: var(--ink);
-        font-family:
-          "Inter",
-          "SF Pro Display",
-          "Segoe UI",
-          system-ui,
-          sans-serif;
+        font-family: "Inter", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
       }
 
       .page {
@@ -733,7 +725,7 @@
         <div class="toolbar">
           <div class="segmented" id="provider-controls" hidden></div>
           <div class="toolbar-row">
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
               <div class="segmented" id="range-controls"></div>
               <div class="segmented" id="metric-controls"></div>
             </div>
@@ -794,11 +786,18 @@
         <section class="heatmap-panel">
           <div class="section-header">
             <div>
-              <p class="stat-label" style="margin:0;">Daily Cost</p>
+              <p class="stat-label" style="margin: 0">Daily Cost</p>
               <div class="meta-note meta-inline">
                 <span id="cost-table-note"></span>
                 <span class="meta-tooltip-wrap" id="missing-pricing-wrap" hidden>
-                  <button type="button" class="meta-badge" id="missing-pricing-details" aria-label="Show missing pricing models">?</button>
+                  <button
+                    type="button"
+                    class="meta-badge"
+                    id="missing-pricing-details"
+                    aria-label="Show missing pricing models"
+                  >
+                    ?
+                  </button>
                   <div class="meta-hovercard" id="missing-pricing-tooltip" role="tooltip"></div>
                 </span>
               </div>
@@ -837,7 +836,9 @@
         <section class="heatmap-panel" id="monthly-comparison-section" hidden>
           <div class="section-header">
             <div>
-              <p class="stat-label" style="margin:0;" id="monthly-comparison-title">Monthly Spend vs Plan</p>
+              <p class="stat-label" style="margin: 0" id="monthly-comparison-title">
+                Monthly Spend vs Plan
+              </p>
               <div class="meta-note" id="monthly-comparison-note"></div>
             </div>
             <label class="plan-input-wrap" for="provider-plan-cost-input">
@@ -910,7 +911,9 @@
 
     <div class="tooltip" id="tooltip"></div>
 
-    <script id="report-data" type="application/json">__DATA__</script>
+    <script id="report-data" type="application/json">
+      __DATA__
+    </script>
     <script>
       const REPORT = JSON.parse(document.getElementById("report-data").textContent);
 
@@ -987,8 +990,9 @@
 
       const defaultRange = "all";
       const defaultProvider =
-        PROVIDER_OPTIONS.find((entry) => entry.key === (REPORT.defaultProvider || ""))
-          ?.key || PROVIDER_OPTIONS[0]?.key || "all";
+        PROVIDER_OPTIONS.find((entry) => entry.key === (REPORT.defaultProvider || ""))?.key ||
+        PROVIDER_OPTIONS[0]?.key ||
+        "all";
       const state = {
         provider: defaultProvider,
         range: defaultRange,
@@ -1009,7 +1013,9 @@
 
       function getFallbackEndDate(report = getActiveReport()) {
         const knownDays = getAllKnownDays(report);
-        return REPORT.generatedLocalDate || (knownDays.length ? knownDays[knownDays.length - 1] : null);
+        return (
+          REPORT.generatedLocalDate || (knownDays.length ? knownDays[knownDays.length - 1] : null)
+        );
       }
 
       const elements = {
@@ -1125,7 +1131,10 @@
           if (abs >= unit.value) {
             const scaled = value / unit.value;
             const digits = Math.abs(scaled) >= 100 ? 0 : Math.abs(scaled) >= 10 ? 1 : 2;
-            return `${scaled.toFixed(digits).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1")}${unit.suffix}`;
+            return `${scaled
+              .toFixed(digits)
+              .replace(/\.0+$/, "")
+              .replace(/(\.\d*[1-9])0+$/, "$1")}${unit.suffix}`;
           }
         }
         return value.toString();
@@ -1192,7 +1201,11 @@
         if (!option.days || allKnownDays.length === 0) {
           if (option.key === "all") {
             return {
-              start: allKnownDays.length ? (allKnownDays[0] < baselineStart ? allKnownDays[0] : baselineStart) : baselineStart,
+              start: allKnownDays.length
+                ? allKnownDays[0] < baselineStart
+                  ? allKnownDays[0]
+                  : baselineStart
+                : baselineStart,
               end: fallbackEndDate,
               label: option.label,
             };
@@ -1221,7 +1234,9 @@
       function getVisibleDays() {
         const report = getActiveReport();
         const range = getCurrentRange();
-        return (report.days || []).filter((entry) => entry.date >= range.start && entry.date <= range.end);
+        return (report.days || []).filter(
+          (entry) => entry.date >= range.start && entry.date <= range.end,
+        );
       }
 
       function getVisibleCalendar() {
@@ -1273,7 +1288,9 @@
         const end = parseIsoDate(endDateString);
         const start = addDays(end, -29);
         const startString = isoDateString(start);
-        return (days || []).filter((entry) => entry.date >= startString && entry.date <= endDateString);
+        return (days || []).filter(
+          (entry) => entry.date >= startString && entry.date <= endDateString,
+        );
       }
 
       function computeStreaks() {
@@ -1288,9 +1305,7 @@
         }
 
         const activeDates = new Set(
-          report.days
-            .filter((entry) => isActivityEntry(entry))
-            .map((entry) => entry.date)
+          report.days.filter((entry) => isActivityEntry(entry)).map((entry) => entry.date),
         );
 
         let longestCount = 0;
@@ -1520,7 +1535,8 @@
                 .map(([model, value]) => `${model}: ${formatCompactNumber(value)}`)
                 .join("<br />");
 
-              const isActivityOnly = (day.entry.totalTokens || 0) <= 0 && (day.entry.displayValue || 0) > 0;
+              const isActivityOnly =
+                (day.entry.totalTokens || 0) <= 0 && (day.entry.displayValue || 0) > 0;
               const tooltipHtml = isActivityOnly
                 ? [
                     `<p class="tooltip-title">${formatDate(day.date)}</p>`,
@@ -1534,7 +1550,9 @@
                     `<p class="tooltip-line"><strong>${formatCurrency(day.entry.costUSD || 0)}</strong> estimated cost</p>`,
                     `<p class="tooltip-line">${formatCompactNumber(day.entry.inputTokens)} input, ${formatCompactNumber(day.entry.cachedInputTokens)} cached, ${formatCompactNumber(day.entry.outputTokens)} output</p>`,
                     `<p class="tooltip-line">${formatCompactNumber(day.entry.reasoningTokens)} reasoning, ${day.entry.events} token events</p>`,
-                    topModels ? `<p class="tooltip-line"><strong>Models</strong><br />${topModels}</p>` : "",
+                    topModels
+                      ? `<p class="tooltip-line"><strong>Models</strong><br />${topModels}</p>`
+                      : "",
                   ].join("");
 
               cell.addEventListener("mousemove", (event) => {
@@ -1548,7 +1566,8 @@
         }
 
         renderMonths(visibleCalendar, range.start);
-        const providerLabel = activeReport.providerShortLabel || activeReport.providerLabel || state.provider;
+        const providerLabel =
+          activeReport.providerShortLabel || activeReport.providerLabel || state.provider;
         elements.rangeNote.textContent = `${providerLabel} · ${range.label} view · ${range.start} to ${range.end} · heatmap metric: ${METRIC_OPTIONS.find((entry) => entry.key === state.metric)?.label ?? state.metric}`;
       }
 
@@ -1621,7 +1640,7 @@
         ];
         if (Number(activeScan.activityOnlyDays || 0) > 0) {
           scanSummaryParts.push(
-            `${Number(activeScan.activityOnlyDays || 0).toLocaleString("en-US")} legacy activity-only days shown`
+            `${Number(activeScan.activityOnlyDays || 0).toLocaleString("en-US")} legacy activity-only days shown`,
           );
         }
         elements.scanSummary.textContent = scanSummaryParts.join(" · ");
@@ -1631,7 +1650,11 @@
           ? `${missingPricing} model(s) missing pricing and counted at $0.00`
           : "Estimated from model token pricing";
         const missingModels = activePricing.missingModels || [];
-        if (elements.missingPricingDetails && elements.missingPricingWrap && elements.missingPricingTooltip) {
+        if (
+          elements.missingPricingDetails &&
+          elements.missingPricingWrap &&
+          elements.missingPricingTooltip
+        ) {
           if (missingModels.length > 0) {
             elements.missingPricingWrap.hidden = false;
             elements.missingPricingTooltip.innerHTML = `
@@ -1676,16 +1699,16 @@
 
         elements.costTableTotalCost.textContent = formatCurrency(totalCost);
         elements.costTableTotalTokens.textContent = formatCompactNumber(
-          visibleDays.reduce((sum, entry) => sum + (entry.totalTokens || 0), 0)
+          visibleDays.reduce((sum, entry) => sum + (entry.totalTokens || 0), 0),
         );
         elements.costTableTotalInput.textContent = formatCompactNumber(
-          visibleDays.reduce((sum, entry) => sum + (entry.inputTokens || 0), 0)
+          visibleDays.reduce((sum, entry) => sum + (entry.inputTokens || 0), 0),
         );
         elements.costTableTotalCached.textContent = formatCompactNumber(
-          visibleDays.reduce((sum, entry) => sum + (entry.cachedInputTokens || 0), 0)
+          visibleDays.reduce((sum, entry) => sum + (entry.cachedInputTokens || 0), 0),
         );
         elements.costTableTotalOutput.textContent = formatCompactNumber(
-          visibleDays.reduce((sum, entry) => sum + (entry.outputTokens || 0), 0)
+          visibleDays.reduce((sum, entry) => sum + (entry.outputTokens || 0), 0),
         );
         elements.costTableTotalModels.textContent = `${modelCount.size} model(s)`;
       }
@@ -1697,16 +1720,17 @@
 
         const activeReport = getActiveReport();
         const comparisonProviderId =
-          activeReport && (activeReport.providerId === "codex" || activeReport.providerId === "claude")
+          activeReport &&
+          (activeReport.providerId === "codex" || activeReport.providerId === "claude")
             ? activeReport.providerId
             : null;
-        const comparisonReport = comparisonProviderId ? PROVIDER_REPORTS[comparisonProviderId] : null;
-        const monthlyRows = [...((comparisonReport && comparisonReport.monthly) || [])].sort((a, b) =>
-          b.month.localeCompare(a.month)
+        const comparisonReport = comparisonProviderId
+          ? PROVIDER_REPORTS[comparisonProviderId]
+          : null;
+        const monthlyRows = [...((comparisonReport && comparisonReport.monthly) || [])].sort(
+          (a, b) => b.month.localeCompare(a.month),
         );
-        const shouldShow =
-          comparisonProviderId &&
-          monthlyRows.length > 0;
+        const shouldShow = comparisonProviderId && monthlyRows.length > 0;
 
         elements.monthlyComparisonSection.hidden = !shouldShow;
         if (!shouldShow) {
@@ -1785,7 +1809,7 @@
               (key) => {
                 state.provider = key;
                 render();
-              }
+              },
             );
           } else {
             elements.providerControls.hidden = true;
@@ -1817,7 +1841,8 @@
         elements.providerPlanCostInput.addEventListener("input", (event) => {
           const activeReport = getActiveReport();
           const comparisonProviderId =
-            activeReport && (activeReport.providerId === "codex" || activeReport.providerId === "claude")
+            activeReport &&
+            (activeReport.providerId === "codex" || activeReport.providerId === "claude")
               ? activeReport.providerId
               : null;
           if (!comparisonProviderId) {

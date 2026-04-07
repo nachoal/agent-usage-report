@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,9 +12,7 @@ import {
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(
-    tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
-  );
+  await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
 async function createTempDir(prefix: string): Promise<string> {
@@ -224,7 +222,11 @@ describe("generateReport", () => {
     await writeFile(
       join(codexHome, "sessions", "sample.jsonl"),
       [
-        JSON.stringify({ type: "turn_context", payload: { model: "gpt-5.4" }, timestamp: "2026-01-01T00:00:00Z" }),
+        JSON.stringify({
+          type: "turn_context",
+          payload: { model: "gpt-5.4" },
+          timestamp: "2026-01-01T00:00:00Z",
+        }),
         JSON.stringify({
           type: "event_msg",
           timestamp: "2026-01-01T01:00:00Z",
