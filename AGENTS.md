@@ -22,12 +22,14 @@
   - monthly rollups
   - Codex and Claude monthly spend-vs-plan comparison
   - Claude `history.jsonl` activity-only fallback days
+  - shareable PNG poster output that follows the current design direction
 
 ## Primary Entry Points
 
 - CLI entry: `src/cli.ts`
 - Core logic: `src/generator.ts`
 - HTML template: `src/template.html`
+- Share renderer: `src/share.ts`
 - Tests: `test/generator.test.ts`
 - Public package metadata: `package.json`
 
@@ -67,6 +69,8 @@
 - `--timezone`
 - `--output-html`
 - `--output-json`
+- `--share-png`
+- `--share-output`
 - `--skip-archived`
 
 ## Implementation Notes
@@ -93,6 +97,7 @@
   - monthly rollups
   - Codex and Claude spend-vs-plan section
   - Claude activity-only fallback from `history.jsonl`
+  - shareable poster PNG for all available providers or the single available provider
 
 ## Editing Guidance
 

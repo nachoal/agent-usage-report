@@ -17,6 +17,7 @@ Features:
 - Daily cost tables
 - Monthly spend-vs-plan comparison for Codex and Claude
 - Claude legacy activity fallback from `history.jsonl`
+- Shareable PNG poster renderer for all available providers or the current single provider
 
 ## Quick Start
 
@@ -53,6 +54,12 @@ agent-usage-report \
   --output-json agent-usage-data.json
 ```
 
+Generate a shareable PNG poster:
+
+```bash
+agent-usage-report --share-png
+```
+
 Flags:
 
 - `--codex-home`: Codex home directory
@@ -62,6 +69,8 @@ Flags:
 - `--timezone`: IANA timezone for day bucketing
 - `--output-html`: HTML output path
 - `--output-json`: JSON output path
+- `--share-png`: generate a shareable PNG poster
+- `--share-output`: PNG output path
 - `--color`: force colored progress output
 - `--no-color`: disable colored progress output
 - `--skip-archived`: skip `~/.codex/archived_sessions`
