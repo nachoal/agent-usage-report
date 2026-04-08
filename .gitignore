@@ -2,5 +2,6 @@ node_modules/
 dist/
 agent-usage-report.html
 agent-usage-data.json
+agent-usage-share.png
 agent-usage-report-sessions-only.html
 agent-usage-data-sessions-only.json
