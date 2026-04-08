@@ -8,6 +8,7 @@ import {
   generateReport,
   parseCliArgs,
 } from "../src/generator.js";
+import { renderSharePosterSvg } from "../src/share.js";
 
 const tempDirs: string[] = [];
 
@@ -38,6 +39,9 @@ describe("parseCliArgs", () => {
       "report.html",
       "--output-json",
       "report.json",
+      "--share-png",
+      "--share-output",
+      "share.png",
       "--color",
       "--skip-archived",
     ]);
@@ -49,6 +53,8 @@ describe("parseCliArgs", () => {
     expect(args.timezone).toBe("UTC");
     expect(args.outputHtml).toBe("report.html");
     expect(args.outputJson).toBe("report.json");
+    expect(args.sharePng).toBe(true);
+    expect(args.shareOutput).toBe("share.png");
     expect(args.skipArchived).toBe(true);
     expect(args.color).toBe(true);
   });
@@ -308,6 +314,8 @@ describe("generateReport", () => {
       timezone: "UTC",
       outputHtml: join(root, "report.html"),
       outputJson: join(root, "report.json"),
+      sharePng: false,
+      shareOutput: join(root, "share.png"),
       skipArchived: true,
     })) as any;
 
@@ -318,5 +326,78 @@ describe("generateReport", () => {
     expect(report.providers.opencode.days).toHaveLength(1);
     expect(report.providers.pi.days).toHaveLength(1);
     expect(report.combined.days).toHaveLength(5);
+  });
+});
+
+describe("renderSharePosterSvg", () => {
+  it("renders all available providers when more than one exists", () => {
+    const report = {
+      generatedAtDisplay: "2026-04-07 14:00 UTC",
+      generatedLocalDate: "2026-04-07",
+      timezone: "UTC",
+      providerOrder: ["codex", "claude"],
+      providers: {
+        codex: {
+          providerId: "codex",
+          providerLabel: "Codex CLI",
+          providerShortLabel: "Codex",
+          days: [
+            {
+              date: "2026-04-01",
+              inputTokens: 100,
+              cachedInputTokens: 0,
+              outputTokens: 10,
+              reasoningTokens: 0,
+              totalTokens: 110,
+              events: 1,
+              costBreakdownUSD: { inputUSD: 1, cachedInputUSD: 0, outputUSD: 0.1, totalUSD: 1.1 },
+              costUSD: 1.1,
+              modelTotals: { "gpt-5.4": 110 },
+              modelBreakdown: [{ name: "gpt-5.4", totalTokens: 110, costUSD: 1.1 }],
+              displayValue: 0,
+            },
+          ],
+          monthly: [],
+          costTotalsUSD: { inputUSD: 1, cachedInputUSD: 0, outputUSD: 0.1, totalUSD: 1.1 },
+          scan: { filesScanned: 1 },
+        },
+        claude: {
+          providerId: "claude",
+          providerLabel: "Claude Code",
+          providerShortLabel: "Claude",
+          days: [
+            {
+              date: "2026-04-02",
+              inputTokens: 0,
+              cachedInputTokens: 0,
+              outputTokens: 0,
+              reasoningTokens: 0,
+              totalTokens: 0,
+              events: 0,
+              costBreakdownUSD: { inputUSD: 0, cachedInputUSD: 0, outputUSD: 0, totalUSD: 0 },
+              costUSD: 0,
+              modelTotals: {},
+              modelBreakdown: [],
+              displayValue: 1,
+            },
+          ],
+          monthly: [],
+          costTotalsUSD: { inputUSD: 0, cachedInputUSD: 0, outputUSD: 0, totalUSD: 0 },
+          scan: { filesScanned: 1 },
+        },
+      },
+      combined: {
+        providerId: "all",
+        providerLabel: "All Providers",
+        providerShortLabel: "All",
+        days: [],
+      },
+    } as any;
+
+    const svg = renderSharePosterSvg(report);
+
+    expect(svg).toContain("Agent Usage");
+    expect(svg).toContain("Codex CLI");
+    expect(svg).toContain("Claude Code");
   });
 });
