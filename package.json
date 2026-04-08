@@ -1,6 +1,6 @@
 {
   "name": "agent-usage-report",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Local agent usage report generator for Codex, Claude Code, OpenCode, and Pi Coding Agent.",
   "homepage": "https://github.com/nachoal/agent-usage-report",
   "bugs": {
