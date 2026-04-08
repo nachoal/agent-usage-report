@@ -4,6 +4,7 @@ import { homedir, platform as osPlatform, release as osRelease } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import picocolors from "picocolors";
+import { renderSharePosterPng, renderSharePosterSvg } from "./share.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -96,6 +97,8 @@ export interface CliArgs {
   timezone: string;
   outputHtml: string;
   outputJson: string;
+  sharePng: boolean;
+  shareOutput: string;
   skipArchived: boolean;
   color?: boolean | null;
 }
@@ -1825,6 +1828,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
     timezone: DEFAULT_TIMEZONE,
     outputHtml: "agent-usage-report.html",
     outputJson: "agent-usage-data.json",
+    sharePng: false,
+    shareOutput: "agent-usage-share.png",
     skipArchived: false,
     color: null,
   };
@@ -1868,6 +1873,14 @@ export function parseCliArgs(argv: string[]): CliArgs {
         args.outputJson = next;
         index += 1;
         break;
+      case "--share-png":
+        args.sharePng = true;
+        break;
+      case "--share-output":
+        if (!next) throw new Error("Missing value for --share-output");
+        args.shareOutput = next;
+        index += 1;
+        break;
       case "--skip-archived":
         args.skipArchived = true;
         break;
@@ -1900,6 +1913,8 @@ Options:
   --timezone <iana-tz>         Day bucketing timezone
   --output-html <path>         HTML output path
   --output-json <path>         JSON output path
+  --share-png                  Generate a shareable PNG poster
+  --share-output <path>        Shareable PNG output path
   --color                      Force colored CLI status output
   --no-color                   Disable colored CLI status output
   --skip-archived              Skip ~/.codex/archived_sessions
@@ -1991,6 +2006,13 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   const outputHtml = resolve(args.outputHtml);
   const outputJson = resolve(args.outputJson);
   await writeOutput(report, outputHtml, outputJson, status);
+  if (args.sharePng) {
+    const shareOutput = resolve(args.shareOutput);
+    status.step(`Rendering shareable PNG poster to ${shareOutput}`);
+    const shareSvg = renderSharePosterSvg(report as never);
+    await renderSharePosterPng(shareSvg, shareOutput);
+    status.success(`Wrote shareable PNG poster to ${shareOutput}`);
+  }
   const combined = report.combined as ProviderReport;
   const primaryScan =
     (report.providers as Record<string, ProviderReport>)[DEFAULT_PROVIDER_ID]?.scan ??
@@ -2007,4 +2029,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   );
   status.info(`HTML report: ${outputHtml}`);
   status.info(`JSON data: ${outputJson}`);
+  if (args.sharePng) {
+    status.info(`PNG share poster: ${resolve(args.shareOutput)}`);
+  }
 }
